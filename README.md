@@ -86,8 +86,21 @@ Before running e2e tests for the first time, install the browser once:
 
 This template is set up to be hosted on [Fly.io](https://fly.io) with
 [Supabase](https://supabase.com) as the managed PostgreSQL database. The container
-image, `fly.toml`, automatic migrations, a health check, and an optional CI deploy
-workflow are all included.
+image (`Dockerfile`), `fly.toml`, automatic migrations, a health check, and a CI
+deploy workflow are all included.
+
+The Fly app has already been created via **Fly Launch** — it is named **`codesigning`**
+(region `ams`), and `fly.toml` is configured to build from the `Dockerfile`. What
+remains are the one-time actions below.
+
+> **One-time actions checklist** (details in the numbered steps):
+>
+> 1. Create a Supabase project and copy its two connection strings.
+> 2. `fly secrets set …` — database URLs, `SESSION_SECRET`, `APP_URL`, and the
+>    `SEED_ADMIN_*` values.
+> 3. `fly deploy` (or push to `main` once CI is enabled).
+> 4. Seed the first admin: `fly ssh console -C "npm run db:seed"`.
+> 5. *(Optional, for automatic deploys)* add a `FLY_API_TOKEN` GitHub secret.
 
 ### 1. Create the Supabase database
 
@@ -107,25 +120,27 @@ workflow are all included.
    Prisma uses the pooled `DATABASE_URL` for app queries and the direct `DIRECT_URL`
    for migrations (see `prisma/schema.prisma`).
 
-### 2. Create the Fly app
+### 2. Install flyctl and log in
 
 ```bash
-# Install flyctl and log in
 curl -L https://fly.io/install.sh | sh
 fly auth login
-
-# Create the app without deploying yet (edit `app`/`primary_region` in fly.toml)
-fly launch --no-deploy
 ```
 
+The app already exists (`codesigning`), so `fly launch` is **not** needed. If you
+want to deploy under a different app name, change `app` in `fly.toml` and create it
+with `fly apps create <name>`.
+
 ### 3. Set secrets
+
+Run from the project root (it reads the app name from `fly.toml`):
 
 ```bash
 fly secrets set \
   DATABASE_URL="postgresql://postgres.<ref>:<pw>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true" \
   DIRECT_URL="postgresql://postgres.<ref>:<pw>@aws-0-<region>.pooler.supabase.com:5432/postgres" \
   SESSION_SECRET="$(openssl rand -base64 32)" \
-  APP_URL="https://<your-app>.fly.dev" \
+  APP_URL="https://codesigning.fly.dev" \
   SEED_ADMIN_EMAIL="you@example.com" \
   SEED_ADMIN_PASSWORD="<a-strong-password>" \
   SEED_ADMIN_NAME="Administrator"
@@ -151,7 +166,7 @@ Migrations run automatically, but seeding the initial admin/roles is a one-time 
 fly ssh console -C "npm run db:seed"
 ```
 
-Then sign in at `https://<your-app>.fly.dev` with the `SEED_ADMIN_*` credentials.
+Then sign in at `https://codesigning.fly.dev` with the `SEED_ADMIN_*` credentials.
 
 ### Automatic deploys (CI)
 

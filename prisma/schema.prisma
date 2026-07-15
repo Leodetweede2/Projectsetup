@@ -3,11 +3,20 @@
 
 generator client {
   provider = "prisma-client-js"
+  // "native" covers local development; "debian-openssl-3.0.x" matches the
+  // node:20-bookworm-slim image used for the Fly.io production container.
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Runtime queries. In production this is the Supabase transaction pooler
+  // (port 6543, with ?pgbouncer=true).
+  url       = env("DATABASE_URL")
+  // Used by `prisma migrate` / `prisma db push`. In production this is the
+  // Supabase direct/session connection (port 5432). Locally it can equal
+  // DATABASE_URL.
+  directUrl = env("DIRECT_URL")
 }
 
 model User {

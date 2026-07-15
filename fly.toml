@@ -1,0 +1,42 @@
+# Fly.io configuration.
+#
+# Change `app` to your Fly app name (or run `fly launch --no-deploy` to have it
+# filled in). Region "ams" (Amsterdam) is a sensible default for EU usage —
+# pick the region closest to your Supabase project.
+
+app = "reusable-app-template"
+primary_region = "ams"
+
+[build]
+
+# Run database migrations before each new version takes traffic. Uses DIRECT_URL
+# (the Supabase direct/session connection) automatically via Prisma.
+[deploy]
+  release_command = "npm run db:deploy"
+
+[env]
+  PORT = "8080"
+  NODE_ENV = "production"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  # Keep one machine warm so the app is always responsive.
+  min_machines_running = 1
+  processes = ["app"]
+
+  # Fly health check — the app is considered healthy when /api/health returns 200.
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "2s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/api/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1

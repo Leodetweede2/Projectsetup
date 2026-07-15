@@ -82,6 +82,91 @@ real email.
 Before running e2e tests for the first time, install the browser once:
 `npx playwright install chromium`.
 
+## Deploying to Fly.io + Supabase
+
+This template is set up to be hosted on [Fly.io](https://fly.io) with
+[Supabase](https://supabase.com) as the managed PostgreSQL database. The container
+image, `fly.toml`, automatic migrations, a health check, and an optional CI deploy
+workflow are all included.
+
+### 1. Create the Supabase database
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. In **Project Settings → Database → Connection string**, copy two URLs:
+   - **Transaction pooler** (port `6543`) → this is your `DATABASE_URL`. Append
+     `?pgbouncer=true`.
+   - **Session / direct** (port `5432`) → this is your `DIRECT_URL`.
+
+   They look like:
+
+   ```
+   DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true
+   DIRECT_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
+   ```
+
+   Prisma uses the pooled `DATABASE_URL` for app queries and the direct `DIRECT_URL`
+   for migrations (see `prisma/schema.prisma`).
+
+### 2. Create the Fly app
+
+```bash
+# Install flyctl and log in
+curl -L https://fly.io/install.sh | sh
+fly auth login
+
+# Create the app without deploying yet (edit `app`/`primary_region` in fly.toml)
+fly launch --no-deploy
+```
+
+### 3. Set secrets
+
+```bash
+fly secrets set \
+  DATABASE_URL="postgresql://postgres.<ref>:<pw>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true" \
+  DIRECT_URL="postgresql://postgres.<ref>:<pw>@aws-0-<region>.pooler.supabase.com:5432/postgres" \
+  SESSION_SECRET="$(openssl rand -base64 32)" \
+  APP_URL="https://<your-app>.fly.dev" \
+  SEED_ADMIN_EMAIL="you@example.com" \
+  SEED_ADMIN_PASSWORD="<a-strong-password>" \
+  SEED_ADMIN_NAME="Administrator"
+# Optionally add SMTP_* / MAIL_FROM to send real verification / reset emails.
+```
+
+### 4. Deploy
+
+```bash
+fly deploy
+```
+
+On every deploy, the `release_command` in `fly.toml` runs `prisma migrate deploy`
+against `DIRECT_URL`, so the database schema is always up to date before the new
+version takes traffic. Fly checks `/api/health` to confirm the app is healthy.
+
+### 5. Seed the first admin (one time)
+
+Migrations run automatically, but seeding the initial admin/roles is a one-time step
+(so no weak default admin is ever created in production):
+
+```bash
+fly ssh console -C "npm run db:seed"
+```
+
+Then sign in at `https://<your-app>.fly.dev` with the `SEED_ADMIN_*` credentials.
+
+### Automatic deploys (CI)
+
+`.github/workflows/fly-deploy.yml` deploys on every push to `main`. Enable it by
+creating a deploy token and adding it as a repository secret:
+
+```bash
+fly tokens create deploy    # copy the token
+# GitHub → repo Settings → Secrets and variables → Actions → New secret
+#   Name: FLY_API_TOKEN   Value: <the token>
+```
+
+After that, every push to `main` builds and deploys automatically (migrations run as
+part of the deploy), so the hosted app always matches the committed code.
+
 ## Project structure
 
 ```
@@ -96,6 +181,7 @@ src/
       profile/  settings/
       admin/users/  admin/roles/  admin/audit/
     api/auth/logout/     # POST route that clears the session
+    api/health/          # health check for Fly.io
     403/                 # forbidden page
   components/ui/         # Button, Input, Card, Table, Alert, Badge, ...
   lib/

@@ -1,0 +1,27 @@
+name: Deploy to Fly.io
+
+# Deploys on every push to the default branch so the hosted app always tracks
+# the latest committed code. Requires a repository secret FLY_API_TOKEN
+# (create one with: fly tokens create deploy).
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: fly-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

@@ -16,6 +16,8 @@ export const PERMISSIONS = {
   ROLES_READ: "roles:read",
   ROLES_WRITE: "roles:write",
   AUDIT_READ: "audit:read",
+  MAPS_READ: "maps:read",
+  MAPS_WRITE: "maps:write",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -57,5 +59,15 @@ export const PERMISSION_METADATA: Record<
     label: "View audit log",
     group: "Audit",
     description: "Read the audit log of security-relevant events.",
+  },
+  [PERMISSIONS.MAPS_READ]: {
+    label: "Find on floor plans",
+    group: "Floor plans",
+    description: "Search rooms/PCs and view their location on floor plans.",
+  },
+  [PERMISSIONS.MAPS_WRITE]: {
+    label: "Manage floor plans",
+    group: "Floor plans",
+    description: "Upload floor plans and place/edit room pins and devices.",
   },
 };

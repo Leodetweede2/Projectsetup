@@ -97,3 +97,58 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
 }
+
+// ---------------------------------------------------------------------------
+// Floor-plan PC locator
+// ---------------------------------------------------------------------------
+
+model FloorPlan {
+  id          String   @id @default(cuid())
+  name        String
+  building    String?
+  floor       String?
+  // Storage object key (see src/lib/storage.ts).
+  imageKey    String
+  // Pixel size of the rendered image, so pin fractions map back to pixels.
+  imageWidth  Int
+  imageHeight Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rooms Room[]
+
+  @@index([building, floor])
+}
+
+model Room {
+  id          String    @id @default(cuid())
+  floorPlanId String
+  floorPlan   FloorPlan @relation(fields: [floorPlanId], references: [id], onDelete: Cascade)
+  number      String
+  name        String?
+  department  String?
+  // Pin position as a fraction (0..1) of the image width/height.
+  x           Float
+  y           Float
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  devices Device[]
+
+  @@index([floorPlanId])
+  @@index([number])
+}
+
+model Device {
+  id        String   @id @default(cuid())
+  // Hostname or label of the PC/device.
+  name      String
+  assetTag  String?
+  roomId    String?
+  room      Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([roomId])
+}

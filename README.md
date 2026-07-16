@@ -317,6 +317,50 @@ part of the deploy), so the hosted app always matches the committed code.
   falls back to the incoming request's host, so make sure you are visiting the app via
   its real URL (not a localhost tunnel).
 
+## Floor-plan PC locator
+
+Servicedesk tool to find where a PC is by its **room number** (or PC name), shown on
+the building's floor plan.
+
+**Roles who can use it:** anyone with `maps:read` (granted to USER + MANAGER + ADMIN by
+the seed) can search and view. Managing plans/pins needs `maps:write` (ADMIN).
+
+**How to use it**
+
+1. **Add a floor plan** — as an admin, go to **Floor plans → Upload a floor plan
+   (PDF)**. The PDF is rendered to an image in your browser (pick the page for
+   multi-page PDFs), then saved.
+2. **Place room pins** — open the plan's **Edit pins** screen. Click an empty spot to
+   add a room (enter its number, optional name/department); click a pin to edit it,
+   move it, delete it, or link PCs (hostname / asset tag) to it.
+3. **Find a PC** — any user opens **Find PC**, types a room number, room name,
+   department, or PC name/asset tag, and clicks a result to see the location
+   highlighted on the plan (with pan/zoom).
+
+A demo plan (`H1.001`–`H1.004`, with a sample PC `AMP-PC-0421`) is created by the seed
+in non-production environments so you can try it immediately.
+
+**Image storage (Supabase Storage)**
+
+Floor-plan images are stored via a small abstraction (`src/lib/storage.ts`) and always
+served through the access-controlled route `GET /api/floorplans/[id]/image`:
+
+- **Production** — Supabase Storage. In the Supabase dashboard, create a **private**
+  bucket named `floorplans` (Storage → New bucket → uncheck "Public"). Then set the
+  secrets:
+
+  ```bash
+  fly secrets set \
+    SUPABASE_URL="https://<ref>.supabase.co" \
+    SUPABASE_SERVICE_ROLE_KEY="<service-role-key>" \
+    SUPABASE_STORAGE_BUCKET="floorplans"
+  ```
+
+  (Find these under Project Settings → API. The service-role key is secret — only set
+  it as a Fly secret, never commit it.)
+- **Local/dev** — if those vars are unset, images are stored on disk under `.storage/`
+  (git-ignored). No Supabase needed to develop or run the tests.
+
 ## Project structure
 
 ```

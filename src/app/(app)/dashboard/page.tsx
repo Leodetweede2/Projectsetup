@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/auth/guards";
-import { effectivePermissions } from "@/lib/rbac/hasPermission";
+import { effectivePermissions, hasPermission } from "@/lib/rbac/hasPermission";
+import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 
@@ -15,6 +17,22 @@ export default async function DashboardPage() {
           You are signed in as {user.email}.
         </p>
       </div>
+
+      {hasPermission(user, PERMISSIONS.MAPS_READ) && (
+        <Link href="/find" className="block">
+          <Card className="border-brand-200 bg-brand-50 transition-colors hover:border-brand-300">
+            <CardBody className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-brand-900">Find a PC on the floor plan</h2>
+                <p className="text-sm text-brand-700">
+                  Search by room number, department, or PC name to see its location.
+                </p>
+              </div>
+              <span className="text-brand-700">Open →</span>
+            </CardBody>
+          </Card>
+        </Link>
+      )}
 
       <div className="grid gap-6 sm:grid-cols-2">
         <Card>

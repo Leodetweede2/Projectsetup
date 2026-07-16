@@ -52,3 +52,43 @@ export const adminUpdateUserSchema = z.object({
   email: emailSchema,
   roleIds: z.array(z.string()).default([]),
 });
+
+// --- Floor-plan locator ----------------------------------------------------
+
+const fraction = z.coerce.number().min(0).max(1);
+
+export const floorPlanUpdateSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(1, "Name is required").max(200),
+  building: z.string().trim().max(120).optional().or(z.literal("")),
+  floor: z.string().trim().max(120).optional().or(z.literal("")),
+});
+
+export const roomCreateSchema = z.object({
+  floorPlanId: z.string().min(1),
+  number: z.string().trim().min(1, "Room number is required").max(60),
+  name: z.string().trim().max(200).optional().or(z.literal("")),
+  department: z.string().trim().max(200).optional().or(z.literal("")),
+  x: fraction,
+  y: fraction,
+});
+
+export const roomUpdateSchema = z.object({
+  roomId: z.string().min(1),
+  number: z.string().trim().min(1, "Room number is required").max(60),
+  name: z.string().trim().max(200).optional().or(z.literal("")),
+  department: z.string().trim().max(200).optional().or(z.literal("")),
+});
+
+export const roomMoveSchema = z.object({
+  roomId: z.string().min(1),
+  x: fraction,
+  y: fraction,
+});
+
+export const deviceSaveSchema = z.object({
+  id: z.string().optional().or(z.literal("")),
+  roomId: z.string().min(1),
+  name: z.string().trim().min(1, "PC name is required").max(120),
+  assetTag: z.string().trim().max(120).optional().or(z.literal("")),
+});

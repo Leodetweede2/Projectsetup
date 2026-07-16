@@ -39,7 +39,12 @@ npm install
 
 # 2. Configure environment
 cp .env.example .env
-# edit .env — at minimum set a strong SESSION_SECRET
+# .env.example is pre-filled with Supabase-style URLs for production reference.
+# For LOCAL development, point both URLs at the docker-compose database and set a
+# secret, i.e. in .env:
+#   DATABASE_URL="postgresql://app:app@localhost:5432/app?schema=public"
+#   DIRECT_URL="postgresql://app:app@localhost:5432/app?schema=public"
+#   SESSION_SECRET="<any long random string>"
 
 # 3. Start PostgreSQL (or point DATABASE_URL at your own)
 docker compose up -d
@@ -75,6 +80,7 @@ real email.
 | `npm run db:migrate`  | Create/apply a dev migration               |
 | `npm run db:deploy`   | Apply migrations (production/CI)           |
 | `npm run db:seed`     | Seed roles + admin user                    |
+| `npm run db:release`  | Migrate then seed (used by Fly on deploy)  |
 | `npm run db:studio`   | Open Prisma Studio                         |
 | `npm run test`        | Run unit tests (Vitest)                    |
 | `npm run test:e2e`    | Run end-to-end tests (Playwright)          |
@@ -98,9 +104,15 @@ remains are the one-time actions below.
 > 1. Create a Supabase project and copy its two connection strings.
 > 2. `fly secrets set …` — database URLs, `SESSION_SECRET`, `APP_URL`, and the
 >    `SEED_ADMIN_*` values.
-> 3. `fly deploy` (or push to `main` once CI is enabled).
-> 4. Seed the first admin: `fly ssh console -C "npm run db:seed"`.
-> 5. *(Optional, for automatic deploys)* add a `FLY_API_TOKEN` GitHub secret.
+> 3. `fly deploy` (or push to `main` once CI is enabled). Migrations **and** the
+>    initial admin/roles seed run automatically as part of the deploy — you do
+>    **not** need to seed manually.
+> 4. *(Optional, for automatic deploys)* add a `FLY_API_TOKEN` GitHub secret.
+>
+> The database URLs, `APP_URL`, and `SEED_ADMIN_*` must point at Supabase / your
+> real app — **not** `localhost`. Localhost values only belong in your local
+> `.env` for development; they are never shipped to Fly (`.env` is git-ignored and
+> excluded via `.dockerignore`).
 
 ### 1. Create the Supabase database
 
@@ -118,7 +130,10 @@ remains are the one-time actions below.
    ```
 
    Prisma uses the pooled `DATABASE_URL` for app queries and the direct `DIRECT_URL`
-   for migrations (see `prisma/schema.prisma`).
+   for migrations and seeding (see `prisma/schema.prisma`). Replace the
+   `[YOUR-PASSWORD]` placeholder with your Supabase database password — leaving the
+   placeholder (or a `localhost` URL) in place is the most common reason seeding
+   fails.
 
 ### 2. Install flyctl and log in
 
@@ -147,26 +162,32 @@ fly secrets set \
 # Optionally add SMTP_* / MAIL_FROM to send real verification / reset emails.
 ```
 
-### 4. Deploy
+### 4. Deploy (migrations + seeding run automatically)
 
 ```bash
 fly deploy
 ```
 
-On every deploy, the `release_command` in `fly.toml` runs `prisma migrate deploy`
-against `DIRECT_URL`, so the database schema is always up to date before the new
-version takes traffic. Fly checks `/api/health` to confirm the app is healthy.
+On every deploy, the `release_command` in `fly.toml` runs `npm run db:release`,
+which:
 
-### 5. Seed the first admin (one time)
+1. applies migrations (`prisma migrate deploy`), then
+2. seeds the roles (ADMIN/MANAGER/USER) and the initial admin from `SEED_ADMIN_*`.
 
-Migrations run automatically, but seeding the initial admin/roles is a one-time step
-(so no weak default admin is ever created in production):
+Both use the direct `DIRECT_URL` connection and are idempotent, so re-deploying is
+safe. Fly checks `/api/health` to confirm the app is healthy. As a safety measure,
+seeding **refuses to run in production** unless a non-default `SEED_ADMIN_PASSWORD`
+secret is set — so make sure you set it in step 3.
+
+Once the deploy is green, sign in at `https://codesigning.fly.dev` with the
+`SEED_ADMIN_*` credentials. You do not need to seed manually.
+
+If you ever want to (re-)seed by hand — for example after changing `SEED_ADMIN_*` —
+run it against the live app:
 
 ```bash
 fly ssh console -C "npm run db:seed"
 ```
-
-Then sign in at `https://codesigning.fly.dev` with the `SEED_ADMIN_*` credentials.
 
 ### Automatic deploys (CI)
 
@@ -181,6 +202,29 @@ fly tokens create deploy    # copy the token
 
 After that, every push to `main` builds and deploys automatically (migrations run as
 part of the deploy), so the hosted app always matches the committed code.
+
+### Troubleshooting
+
+**"Seeding a new database doesn't work" / "I still see `localhost` everywhere."**
+
+- Prisma and Next.js automatically load `.env`. If your local `.env` still contains
+  `localhost` / `127.0.0.1` URLs (the local-dev defaults), then running
+  `npm run db:seed` **locally** talks to your local database, not Supabase. To seed
+  Supabase from your machine, put the Supabase `DATABASE_URL` / `DIRECT_URL` in `.env`
+  first (with the real password, not `[YOUR-PASSWORD]`). Easiest is to let the deploy
+  seed for you (step 4) — the Fly container has no `.env` and uses your secrets.
+- Make sure migrations have run before seeding. On Fly this is automatic
+  (`db:release` = migrate then seed). If tables don't exist yet, seeding fails.
+- Seeding uses `DIRECT_URL` (the session connection, port `5432`), not the
+  transaction pooler — set both secrets.
+- In production, seeding intentionally errors if `SEED_ADMIN_PASSWORD` is unset or
+  left at the weak default; set a strong one as a secret.
+
+**Verification / password-reset emails link to `localhost:3000`.**
+
+- Set the `APP_URL` secret to `https://codesigning.fly.dev`. If it is unset, the app
+  falls back to the incoming request's host, so make sure you are visiting the app via
+  its real URL (not a localhost tunnel).
 
 ## Project structure
 

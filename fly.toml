@@ -9,7 +9,10 @@ primary_region = 'ams'
 [build]
 
 [deploy]
-  release_command = 'npm run db:deploy'
+  # Runs before each new version takes traffic: apply migrations, then seed
+  # roles + the initial admin (idempotent). Requires DATABASE_URL, DIRECT_URL
+  # and SEED_ADMIN_* to be set as secrets.
+  release_command = 'npm run db:release'
 
 [env]
   NODE_ENV = 'production'

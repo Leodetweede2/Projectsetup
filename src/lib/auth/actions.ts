@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
 import { sendMail } from "@/lib/mail";
 import { AUDIT_ACTIONS, logAudit } from "@/lib/audit";
@@ -20,7 +21,24 @@ export interface ActionState {
   fieldErrors?: Record<string, string>;
 }
 
-const appUrl = () => process.env.APP_URL ?? "http://localhost:3000";
+/**
+ * Base URL used to build verification / reset links. Prefers the APP_URL env
+ * var (set this in production, e.g. https://your-app.fly.dev). When it is not
+ * set, it derives the URL from the incoming request headers so links still
+ * point at the real host instead of localhost.
+ */
+async function appUrl(): Promise<string> {
+  if (process.env.APP_URL) return process.env.APP_URL;
+  try {
+    const h = await headers();
+    const host = h.get("x-forwarded-host") ?? h.get("host");
+    const proto = h.get("x-forwarded-proto") ?? "https";
+    if (host) return `${proto}://${host}`;
+  } catch {
+    // headers() unavailable outside a request scope — fall through.
+  }
+  return "http://localhost:3000";
+}
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 const RESET_TTL_MS = 60 * 60 * 1000; // 1h
 
@@ -79,7 +97,7 @@ export async function registerAction(
   });
 
   const token = await issueVerificationToken(email, "EMAIL_VERIFY");
-  const link = `${appUrl()}/verify-email?token=${token}`;
+  const link = `${await appUrl()}/verify-email?token=${token}`;
   await sendMail({
     to: email,
     subject: "Verify your email",
@@ -181,7 +199,7 @@ export async function forgotPasswordAction(
   // Always respond the same way to avoid leaking which emails are registered.
   if (user) {
     const token = await issueVerificationToken(email, "PASSWORD_RESET");
-    const link = `${appUrl()}/reset-password?token=${token}`;
+    const link = `${await appUrl()}/reset-password?token=${token}`;
     await sendMail({
       to: email,
       subject: "Reset your password",

@@ -13,8 +13,11 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url,
 ).toString();
 
-// Cap the rendered width so images stay a reasonable size.
-const MAX_WIDTH = 2000;
+// Target width of the rasterised image. Higher = crisper when zooming in the
+// viewer, at the cost of a larger file. Small PDFs are rendered at up to
+// MAX_SCALE; large-format plans are rendered down to at most MAX_WIDTH.
+const MAX_WIDTH = 4500;
+const MAX_SCALE = 4;
 
 export function UploadFloorPlan() {
   const router = useRouter();
@@ -32,7 +35,7 @@ export function UploadFloorPlan() {
   async function renderPage(doc: pdfjsLib.PDFDocumentProxy, pageNumber: number) {
     const p = await doc.getPage(pageNumber);
     const base = p.getViewport({ scale: 1 });
-    const scale = Math.min(2, MAX_WIDTH / base.width);
+    const scale = Math.min(MAX_SCALE, MAX_WIDTH / base.width);
     const viewport = p.getViewport({ scale });
     const canvas = canvasRef.current!;
     canvas.width = Math.floor(viewport.width);

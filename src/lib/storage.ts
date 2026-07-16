@@ -53,9 +53,23 @@ export function contentTypeFor(key: string): string {
 
 async function supabaseClient() {
   const { createClient } = await import("@supabase/supabase-js");
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-    auth: { persistSession: false },
-  });
+  // Trim to defend against stray whitespace / newlines in the secret value.
+  const url = (process.env.SUPABASE_URL ?? "").trim();
+  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").trim();
+  return createClient(url, key, { auth: { persistSession: false } });
+}
+
+/** Add actionable guidance to common Supabase auth/key errors. */
+function withKeyHint(message: string): string {
+  if (/jws|jwt|invalid.*(header|signature|token)|invalid api key|unauthorized/i.test(message)) {
+    return (
+      `${message} — check SUPABASE_SERVICE_ROLE_KEY. It must be the project's ` +
+      `**service_role** key: a JWT that starts with "eyJ" (Project Settings → API → ` +
+      `Project API keys → service_role). Do not use the anon / publishable key or a ` +
+      `new-style "sb_secret_…" key, and make sure the value has no quotes or line breaks.`
+    );
+  }
+  return message;
 }
 
 
@@ -80,13 +94,12 @@ export async function putObject(
       });
       if (createError && !/already exists/i.test(createError.message)) {
         throw new Error(
-          `Could not create Supabase bucket "${BUCKET}": ${createError.message}. ` +
-            `Create it manually (Storage → New bucket, private) or check SUPABASE_SERVICE_ROLE_KEY.`,
+          `Could not create Supabase bucket "${BUCKET}": ${withKeyHint(createError.message)}`,
         );
       }
       ({ error } = await upload());
     }
-    if (error) throw new Error(`Supabase upload failed: ${error.message}`);
+    if (error) throw new Error(`Supabase upload failed: ${withKeyHint(error.message)}`);
     return;
   }
 
@@ -105,7 +118,9 @@ export async function getSignedUrl(key: string): Promise<string | null> {
   const { data, error } = await client.storage
     .from(BUCKET)
     .createSignedUrl(key, SIGNED_URL_TTL_SECONDS);
-  if (error || !data) throw new Error(`Supabase signed URL failed: ${error?.message}`);
+  if (error || !data) {
+    throw new Error(`Supabase signed URL failed: ${withKeyHint(error?.message ?? "unknown error")}`);
+  }
   return data.signedUrl;
 }
 

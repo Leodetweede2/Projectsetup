@@ -356,8 +356,12 @@ served through the access-controlled route `GET /api/floorplans/[id]/image`:
     SUPABASE_STORAGE_BUCKET="floorplans"
   ```
 
-  (Find these under Project Settings → API. The service-role key is secret — only set
-  it as a Fly secret, never commit it.)
+  Find these under **Project Settings → API**. `SUPABASE_SERVICE_ROLE_KEY` must be the
+  **service_role** key — a JWT that **starts with `eyJ`** (Project API keys →
+  `service_role`). Do **not** use the `anon` / publishable key or a new-style
+  `sb_secret_…` key: the Storage API rejects those with *"JWS Protected Header is
+  invalid"*. The service-role key is secret — only set it as a Fly secret, never commit
+  it, and make sure there are no surrounding quotes or line breaks in the value.
 - **Local/dev** — if those vars are unset, images are stored on disk under `.storage/`
   (git-ignored). No Supabase needed to develop or run the tests.
 

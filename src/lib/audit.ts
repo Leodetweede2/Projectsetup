@@ -19,6 +19,14 @@ export const AUDIT_ACTIONS = {
   USER_ACTIVATED: "user.activated",
   USER_ROLES_CHANGED: "user.roles_changed",
   ROLE_UPDATED: "role.updated",
+  FLOORPLAN_CREATED: "floorplan.created",
+  FLOORPLAN_UPDATED: "floorplan.updated",
+  FLOORPLAN_DELETED: "floorplan.deleted",
+  ROOM_CREATED: "room.created",
+  ROOM_UPDATED: "room.updated",
+  ROOM_DELETED: "room.deleted",
+  DEVICE_SAVED: "device.saved",
+  DEVICE_DELETED: "device.deleted",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

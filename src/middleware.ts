@@ -9,7 +9,7 @@ import { SESSION_COOKIE } from "@/lib/auth/constants";
  * permission checks happen in server components/actions via the guards in
  * src/lib/auth/guards.ts.
  */
-const PROTECTED_PREFIXES = ["/dashboard", "/profile", "/settings", "/admin"];
+const PROTECTED_PREFIXES = ["/dashboard", "/profile", "/settings", "/admin", "/find"];
 const AUTH_PAGES = ["/login", "/register"];
 
 export function middleware(request: NextRequest) {
@@ -33,5 +33,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/profile/:path*", "/settings/:path*", "/admin/:path*", "/login", "/register"],
+  matcher: ["/dashboard/:path*", "/profile/:path*", "/settings/:path*", "/admin/:path*", "/find/:path*", "/login", "/register"],
 };

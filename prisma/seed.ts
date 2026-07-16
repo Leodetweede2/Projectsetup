@@ -25,22 +25,24 @@ async function main() {
 
   await prisma.role.upsert({
     where: { name: "MANAGER" },
-    update: {},
+    update: {
+      permissions: [PERMISSIONS.USERS_READ, PERMISSIONS.AUDIT_READ, PERMISSIONS.MAPS_READ],
+    },
     create: {
       name: "MANAGER",
-      description: "Can view users and the audit log.",
-      permissions: [PERMISSIONS.USERS_READ, PERMISSIONS.AUDIT_READ],
+      description: "Can view users and the audit log, and use the floor-plan locator.",
+      permissions: [PERMISSIONS.USERS_READ, PERMISSIONS.AUDIT_READ, PERMISSIONS.MAPS_READ],
       isSystem: true,
     },
   });
 
   await prisma.role.upsert({
     where: { name: "USER" },
-    update: {},
+    update: { permissions: [PERMISSIONS.MAPS_READ] },
     create: {
       name: "USER",
-      description: "Standard member with no administrative access.",
-      permissions: [],
+      description: "Standard member. Can search floor plans to locate PCs.",
+      permissions: [PERMISSIONS.MAPS_READ],
       isSystem: true,
     },
   });
@@ -73,6 +75,57 @@ async function main() {
   });
 
   console.log(`Seeded roles (ADMIN, MANAGER, USER) and admin user: ${email}`);
+
+  // ---- Demo floor plan (skipped in production) -------------------------
+  if (process.env.NODE_ENV !== "production" || process.env.SEED_DEMO === "true") {
+    await seedDemoFloorPlan();
+    console.log("Seeded demo floor plan (H1.001–H1.004) with a sample PC.");
+  }
+}
+
+async function seedDemoFloorPlan() {
+  const { readFile } = await import("fs/promises");
+  const { join } = await import("path");
+  const { putObject } = await import("../src/lib/storage");
+
+  const imageKey = "floorplans/demo-floorplan.svg";
+  const svg = await readFile(join(process.cwd(), "prisma/demo/floorplan.svg"));
+  await putObject(imageKey, new Uint8Array(svg), "image/svg+xml");
+
+  const plan = await prisma.floorPlan.upsert({
+    where: { id: "demo-floorplan" },
+    update: { imageKey, imageWidth: 1000, imageHeight: 700 },
+    create: {
+      id: "demo-floorplan",
+      name: "Demo — Building H, Floor 1",
+      building: "H",
+      floor: "1",
+      imageKey,
+      imageWidth: 1000,
+      imageHeight: 700,
+    },
+  });
+
+  // Pin positions as fractions of the 1000x700 image (room centres).
+  const rooms = [
+    { id: "demo-room-1", number: "H1.001", name: "Room 001", department: "Radiologie", x: 0.15, y: 0.214 },
+    { id: "demo-room-2", number: "H1.002", name: "Room 002", department: "Cardiologie", x: 0.68, y: 0.214 },
+    { id: "demo-room-3", number: "H1.003", name: "Room 003", department: "Servicedesk", x: 0.15, y: 0.786 },
+    { id: "demo-room-4", number: "H1.004", name: "Room 004", department: "Longafdeling", x: 0.68, y: 0.786 },
+  ];
+  for (const r of rooms) {
+    await prisma.room.upsert({
+      where: { id: r.id },
+      update: { number: r.number, name: r.name, department: r.department, x: r.x, y: r.y, floorPlanId: plan.id },
+      create: { ...r, floorPlanId: plan.id },
+    });
+  }
+
+  await prisma.device.upsert({
+    where: { id: "demo-device-1" },
+    update: { name: "AMP-PC-0421", assetTag: "ASSET-0421", roomId: "demo-room-1" },
+    create: { id: "demo-device-1", name: "AMP-PC-0421", assetTag: "ASSET-0421", roomId: "demo-room-1" },
+  });
 }
 
 main()

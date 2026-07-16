@@ -30,6 +30,9 @@ yarn-error.log*
 # prisma
 /prisma/generated
 
+# local file storage (dev fallback for floor-plan images)
+/.storage
+
 # testing
 /coverage
 /test-results

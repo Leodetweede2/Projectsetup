@@ -6,6 +6,17 @@ export function clamp01(n: number): number {
   return Math.min(1, Math.max(0, n));
 }
 
+/**
+ * Normalise a room number for matching (Excel value ↔ floor-plan pin).
+ * Upper-cases, trims, and removes all whitespace so "h 1.001" matches "H1.001".
+ */
+export function normalizeRoomNumber(value: unknown): string {
+  return String(value ?? "")
+    .toUpperCase()
+    .replace(/\s+/g, "")
+    .trim();
+}
+
 /** Human label for a plan, e.g. "Building H · Floor 1" (falls back to name). */
 export function planLabel(plan: {
   name: string;

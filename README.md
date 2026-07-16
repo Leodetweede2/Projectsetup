@@ -340,6 +340,23 @@ the seed) can search and view. Managing plans/pins needs `maps:write` (ADMIN).
 A demo plan (`H1.001`–`H1.004`, with a sample PC `AMP-PC-0421`) is created by the seed
 in non-production environments so you can try it immediately.
 
+**Asset list (Excel import)**
+
+You can couple your existing asset list (e.g. an Excel export from SharePoint) to the app:
+
+1. Export the SharePoint list to Excel (`.xlsx`).
+2. As an admin, go to **Import list**, upload the file, and pick which column holds the
+   **room number**. Importing replaces the previous list (re-upload whenever it changes).
+3. Everyone with access sees the data under **Asset list** (`/list`) — a searchable
+   overview of all columns. Each row links to its location on the floor plan when its
+   room number matches a placed pin, and the matching rows also appear on a room's map
+   view.
+
+Rows are linked to pins by room number (case- and whitespace-insensitive). The list is
+stored in the database, so no SharePoint credentials are needed — you just re-upload the
+export when it is updated. (Automatic SharePoint sync via Microsoft Graph can be added
+later if desired.)
+
 **Image storage (Supabase Storage)**
 
 Floor-plan images are stored via a small abstraction (`src/lib/storage.ts`) and always
@@ -356,8 +373,12 @@ served through the access-controlled route `GET /api/floorplans/[id]/image`:
     SUPABASE_STORAGE_BUCKET="floorplans"
   ```
 
-  (Find these under Project Settings → API. The service-role key is secret — only set
-  it as a Fly secret, never commit it.)
+  Find these under **Project Settings → API**. `SUPABASE_SERVICE_ROLE_KEY` must be the
+  **service_role** key — a JWT that **starts with `eyJ`** (Project API keys →
+  `service_role`). Do **not** use the `anon` / publishable key or a new-style
+  `sb_secret_…` key: the Storage API rejects those with *"JWS Protected Header is
+  invalid"*. The service-role key is secret — only set it as a Fly secret, never commit
+  it, and make sure there are no surrounding quotes or line breaks in the value.
 - **Local/dev** — if those vars are unset, images are stored on disk under `.storage/`
   (git-ignored). No Supabase needed to develop or run the tests.
 

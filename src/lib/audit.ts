@@ -27,6 +27,8 @@ export const AUDIT_ACTIONS = {
   ROOM_DELETED: "room.deleted",
   DEVICE_SAVED: "device.saved",
   DEVICE_DELETED: "device.deleted",
+  ASSET_LIST_IMPORTED: "asset_list.imported",
+  ASSET_LIST_CLEARED: "asset_list.cleared",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

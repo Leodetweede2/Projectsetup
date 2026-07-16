@@ -8,7 +8,7 @@ import { AUDIT_ACTIONS, logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
-const MAX_BYTES = 15 * 1024 * 1024; // 15 MB
+const MAX_BYTES = 30 * 1024 * 1024; // 30 MB
 
 /**
  * Create a floor plan from an uploaded (already rasterised) PNG image. The
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid image dimensions." }, { status: 400 });
     }
     if (file.size > MAX_BYTES) {
-      return NextResponse.json({ error: "Image is too large (max 15 MB)." }, { status: 400 });
+      return NextResponse.json({ error: "Image is too large (max 30 MB)." }, { status: 400 });
     }
 
     const bytes = new Uint8Array(await file.arrayBuffer());

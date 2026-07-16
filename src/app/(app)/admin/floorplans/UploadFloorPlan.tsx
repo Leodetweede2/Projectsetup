@@ -90,8 +90,18 @@ export function UploadFloorPlan() {
       fd.set("height", String(canvas.height));
 
       const res = await fetch("/api/floorplans", { method: "POST", body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Upload failed");
+      const raw = await res.text();
+      let data: { id?: string; error?: string } = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        // Non-JSON response (e.g. a proxy error page).
+      }
+      if (!res.ok || !data.id) {
+        throw new Error(
+          data.error ?? `Upload failed (HTTP ${res.status})${raw ? `: ${raw.slice(0, 200)}` : ""}`,
+        );
+      }
       router.push(`/admin/floorplans/${data.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));

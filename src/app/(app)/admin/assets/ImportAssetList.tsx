@@ -29,14 +29,50 @@ export function ImportAssetList() {
     try {
       const XLSX = await import("xlsx");
       const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, { type: "array" });
+      const wb = XLSX.read(buf, { type: "array", cellDates: true });
       const ws = wb.Sheets[wb.SheetNames[0]];
-      const parsed = XLSX.utils.sheet_to_json<Row>(ws, { defval: "" });
-      if (parsed.length === 0) {
+
+      // Recompute the used range from the actual cells, so no columns are
+      // dropped because of a stale/narrow "!ref" written by the exporter.
+      const range = XLSX.utils.decode_range(ws["!ref"] ?? "A1");
+      for (const addr of Object.keys(ws)) {
+        if (addr[0] === "!") continue;
+        const { r, c } = XLSX.utils.decode_cell(addr);
+        if (r > range.e.r) range.e.r = r;
+        if (c > range.e.c) range.e.c = c;
+        if (r < range.s.r) range.s.r = r;
+        if (c < range.s.c) range.s.c = c;
+      }
+      ws["!ref"] = XLSX.utils.encode_range(range);
+
+      // Read the raw grid; take columns positionally from the header row so
+      // every column is captured (even where the first data row is empty).
+      const aoa = XLSX.utils.sheet_to_json(ws, {
+        header: 1,
+        blankrows: false,
+        defval: "",
+        raw: false,
+      }) as unknown[][];
+
+      if (aoa.length < 2) {
         setError("That file has no data rows.");
         return;
       }
-      const cols = Object.keys(parsed[0]);
+
+      const headerRow = aoa[0] ?? [];
+      const cols = headerRow.map((h, i) => {
+        const name = String(h ?? "").trim();
+        return name === "" ? `Column ${i + 1}` : name;
+      });
+      const parsed: Row[] = aoa.slice(1).map((arr) => {
+        const obj: Row = {};
+        cols.forEach((col, i) => {
+          const v = arr[i];
+          obj[col] = v == null ? "" : String(v);
+        });
+        return obj;
+      });
+
       setFilename(file.name);
       setColumns(cols);
       setRows(parsed);

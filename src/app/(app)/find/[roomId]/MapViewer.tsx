@@ -29,7 +29,7 @@ export function MapViewer({ imageUrl, x, y, label }: Props) {
           <TransformComponent
             wrapperStyle={{
               width: "100%",
-              height: "70vh",
+              height: "78vh",
               background: "#f1f5f9",
               borderRadius: "0.5rem",
               border: "1px solid #e2e8f0",

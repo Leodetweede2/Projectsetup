@@ -58,13 +58,6 @@ async function supabaseClient() {
   });
 }
 
-async function ensureBucket(client: Awaited<ReturnType<typeof supabaseClient>>) {
-  // Best-effort: create a private bucket if it does not exist yet.
-  const { data } = await client.storage.getBucket(BUCKET);
-  if (!data) {
-    await client.storage.createBucket(BUCKET, { public: false }).catch(() => {});
-  }
-}
 
 // --- Public API ------------------------------------------------------------
 
@@ -76,10 +69,23 @@ export async function putObject(
 ): Promise<void> {
   if (storageDriver() === "supabase") {
     const client = await supabaseClient();
-    await ensureBucket(client);
-    const { error } = await client.storage
-      .from(BUCKET)
-      .upload(key, bytes, { contentType, upsert: true });
+    const upload = () =>
+      client.storage.from(BUCKET).upload(key, bytes, { contentType, upsert: true });
+
+    let { error } = await upload();
+    // Auto-create the (private) bucket the first time if it does not exist yet.
+    if (error && /bucket not found|not found/i.test(error.message)) {
+      const { error: createError } = await client.storage.createBucket(BUCKET, {
+        public: false,
+      });
+      if (createError && !/already exists/i.test(createError.message)) {
+        throw new Error(
+          `Could not create Supabase bucket "${BUCKET}": ${createError.message}. ` +
+            `Create it manually (Storage → New bucket, private) or check SUPABASE_SERVICE_ROLE_KEY.`,
+        );
+      }
+      ({ error } = await upload());
+    }
     if (error) throw new Error(`Supabase upload failed: ${error.message}`);
     return;
   }

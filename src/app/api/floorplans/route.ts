@@ -21,49 +21,57 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const form = await req.formData();
-  const file = form.get("file");
-  const name = String(form.get("name") ?? "").trim();
-  const building = String(form.get("building") ?? "").trim() || null;
-  const floor = String(form.get("floor") ?? "").trim() || null;
-  const width = Number(form.get("width"));
-  const height = Number(form.get("height"));
+  try {
+    const form = await req.formData();
+    const file = form.get("file");
+    const name = String(form.get("name") ?? "").trim();
+    const building = String(form.get("building") ?? "").trim() || null;
+    const floor = String(form.get("floor") ?? "").trim() || null;
+    const width = Number(form.get("width"));
+    const height = Number(form.get("height"));
 
-  if (!(file instanceof Blob)) {
-    return NextResponse.json({ error: "Missing image file." }, { status: 400 });
+    if (!(file instanceof Blob)) {
+      return NextResponse.json({ error: "Missing image file." }, { status: 400 });
+    }
+    if (!name) {
+      return NextResponse.json({ error: "Name is required." }, { status: 400 });
+    }
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+      return NextResponse.json({ error: "Invalid image dimensions." }, { status: 400 });
+    }
+    if (file.size > MAX_BYTES) {
+      return NextResponse.json({ error: "Image is too large (max 15 MB)." }, { status: 400 });
+    }
+
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const key = newImageKey(".png");
+    await putObject(key, bytes, "image/png");
+
+    const plan = await prisma.floorPlan.create({
+      data: {
+        name,
+        building,
+        floor,
+        imageKey: key,
+        imageWidth: Math.round(width),
+        imageHeight: Math.round(height),
+      },
+    });
+
+    await logAudit({
+      action: AUDIT_ACTIONS.FLOORPLAN_CREATED,
+      actorUserId: user!.id,
+      targetType: "floorplan",
+      targetId: plan.id,
+      metadata: { name, building, floor },
+    });
+
+    return NextResponse.json({ id: plan.id });
+  } catch (err) {
+    // Always return JSON so the client can show a meaningful message instead of
+    // failing on an empty error body.
+    console.error("Floor plan upload failed:", err);
+    const message = err instanceof Error ? err.message : "Upload failed.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-  if (!name) {
-    return NextResponse.json({ error: "Name is required." }, { status: 400 });
-  }
-  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-    return NextResponse.json({ error: "Invalid image dimensions." }, { status: 400 });
-  }
-  if (file.size > MAX_BYTES) {
-    return NextResponse.json({ error: "Image is too large (max 15 MB)." }, { status: 400 });
-  }
-
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  const key = newImageKey(".png");
-  await putObject(key, bytes, "image/png");
-
-  const plan = await prisma.floorPlan.create({
-    data: {
-      name,
-      building,
-      floor,
-      imageKey: key,
-      imageWidth: Math.round(width),
-      imageHeight: Math.round(height),
-    },
-  });
-
-  await logAudit({
-    action: AUDIT_ACTIONS.FLOORPLAN_CREATED,
-    actorUserId: user!.id,
-    targetType: "floorplan",
-    targetId: plan.id,
-    metadata: { name, building, floor },
-  });
-
-  return NextResponse.json({ id: plan.id });
 }

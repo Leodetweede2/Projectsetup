@@ -4,8 +4,10 @@ import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { planLabel } from "@/lib/maps/search";
+import { getRecordsForRoom } from "@/lib/assets/queries";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { MapViewer } from "./MapViewer";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +28,8 @@ export default async function RoomLocationPage({
     },
   });
   if (!room) notFound();
+
+  const assets = await getRecordsForRoom(room.number);
 
   return (
     <div className="space-y-6">
@@ -66,6 +70,34 @@ export default async function RoomLocationPage({
                 </li>
               ))}
             </ul>
+          </CardBody>
+        </Card>
+      )}
+
+      {assets.rows.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>From the asset list ({assets.rows.length})</CardTitle>
+          </CardHeader>
+          <CardBody className="p-0">
+            <Table>
+              <THead>
+                <TR>
+                  {assets.columns.map((c) => (
+                    <TH key={c}>{c}</TH>
+                  ))}
+                </TR>
+              </THead>
+              <TBody>
+                {assets.rows.map((row, i) => (
+                  <TR key={i}>
+                    {assets.columns.map((c) => (
+                      <TD key={c}>{row[c] ?? ""}</TD>
+                    ))}
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
           </CardBody>
         </Card>
       )}

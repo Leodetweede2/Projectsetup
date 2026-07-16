@@ -340,6 +340,23 @@ the seed) can search and view. Managing plans/pins needs `maps:write` (ADMIN).
 A demo plan (`H1.001`–`H1.004`, with a sample PC `AMP-PC-0421`) is created by the seed
 in non-production environments so you can try it immediately.
 
+**Asset list (Excel import)**
+
+You can couple your existing asset list (e.g. an Excel export from SharePoint) to the app:
+
+1. Export the SharePoint list to Excel (`.xlsx`).
+2. As an admin, go to **Import list**, upload the file, and pick which column holds the
+   **room number**. Importing replaces the previous list (re-upload whenever it changes).
+3. Everyone with access sees the data under **Asset list** (`/list`) — a searchable
+   overview of all columns. Each row links to its location on the floor plan when its
+   room number matches a placed pin, and the matching rows also appear on a room's map
+   view.
+
+Rows are linked to pins by room number (case- and whitespace-insensitive). The list is
+stored in the database, so no SharePoint credentials are needed — you just re-upload the
+export when it is updated. (Automatic SharePoint sync via Microsoft Graph can be added
+later if desired.)
+
 **Image storage (Supabase Storage)**
 
 Floor-plan images are stored via a small abstraction (`src/lib/storage.ts`) and always

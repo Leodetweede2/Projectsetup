@@ -152,3 +152,36 @@ model Device {
   @@index([name])
   @@index([roomId])
 }
+
+// ---------------------------------------------------------------------------
+// Imported asset list (from an Excel/SharePoint export)
+// ---------------------------------------------------------------------------
+
+model AssetImport {
+  id               String        @id @default(cuid())
+  filename         String
+  // Which column holds the room number used to link a row to a floor-plan pin.
+  roomNumberColumn String
+  // Ordered list of column headers (for rendering the overview table).
+  columns          String[]
+  rowCount         Int
+  createdAt        DateTime      @default(now())
+  createdById      String?
+  records          AssetRecord[]
+}
+
+model AssetRecord {
+  id         String      @id @default(cuid())
+  importId   String
+  import     AssetImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+  // Normalised room number (for matching Room.number).
+  roomNumber String
+  // All columns of the row as { header: value }.
+  data       Json
+  // Lower-cased concatenation of all values, for simple full-row search.
+  searchText String
+  createdAt  DateTime    @default(now())
+
+  @@index([importId])
+  @@index([roomNumber])
+}

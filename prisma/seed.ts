@@ -79,8 +79,39 @@ async function main() {
   // ---- Demo floor plan (skipped in production) -------------------------
   if (process.env.NODE_ENV !== "production" || process.env.SEED_DEMO === "true") {
     await seedDemoFloorPlan();
-    console.log("Seeded demo floor plan (H1.001–H1.004) with a sample PC.");
+    await seedDemoAssetList();
+    console.log("Seeded demo floor plan (H1.001–H1.004), a sample PC, and a demo asset list.");
   }
+}
+
+async function seedDemoAssetList() {
+  const norm = (s: string) => s.toUpperCase().replace(/\s+/g, "").trim();
+  const columns = ["Ruimtenummer", "PC-naam", "Gebruiker", "Type"];
+  const rows = [
+    { Ruimtenummer: "H1.001", "PC-naam": "AMP-PC-0421", Gebruiker: "Balie 1", Type: "Desktop" },
+    { Ruimtenummer: "H1.002", "PC-naam": "AMP-PC-0510", Gebruiker: "Dr. Jansen", Type: "Laptop" },
+    { Ruimtenummer: "H1.003", "PC-naam": "AMP-PC-0333", Gebruiker: "Servicedesk", Type: "Desktop" },
+    // No matching pin on the demo plan — shows as "not on a map yet".
+    { Ruimtenummer: "H1.099", "PC-naam": "AMP-PC-9999", Gebruiker: "Onbekend", Type: "Desktop" },
+  ];
+
+  await prisma.assetImport.deleteMany({ where: { id: "demo-import" } });
+  await prisma.assetImport.create({
+    data: {
+      id: "demo-import",
+      filename: "demo-assets.xlsx",
+      roomNumberColumn: "Ruimtenummer",
+      columns,
+      rowCount: rows.length,
+      records: {
+        create: rows.map((r) => ({
+          roomNumber: norm(r.Ruimtenummer),
+          data: r,
+          searchText: Object.values(r).join(" ").toLowerCase(),
+        })),
+      },
+    },
+  });
 }
 
 async function seedDemoFloorPlan() {

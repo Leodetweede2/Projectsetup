@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clamp01, planLabel } from "@/lib/maps/search";
+import { clamp01, planLabel, normalizeRoomNumber } from "@/lib/maps/search";
 
 describe("clamp01", () => {
   it("keeps values within 0..1", () => {
@@ -27,5 +27,19 @@ describe("planLabel", () => {
 
   it("falls back to the name when nothing else is set", () => {
     expect(planLabel({ name: "Ground floor", building: null, floor: null })).toBe("Ground floor");
+  });
+});
+
+describe("normalizeRoomNumber", () => {
+  it("upper-cases and strips whitespace so Excel values match pins", () => {
+    expect(normalizeRoomNumber("h1.001")).toBe("H1.001");
+    expect(normalizeRoomNumber("  H1.001 ")).toBe("H1.001");
+    expect(normalizeRoomNumber("H 1.001")).toBe("H1.001");
+  });
+
+  it("handles nullish / numeric values", () => {
+    expect(normalizeRoomNumber(null)).toBe("");
+    expect(normalizeRoomNumber(undefined)).toBe("");
+    expect(normalizeRoomNumber(101)).toBe("101");
   });
 });

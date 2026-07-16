@@ -15,6 +15,7 @@
     "db:release": "prisma migrate deploy && prisma db seed",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
+    "email:test": "tsx scripts/send-test-email.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",

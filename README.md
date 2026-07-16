@@ -61,12 +61,36 @@ Open http://localhost:3000 and sign in with the seeded admin credentials from
 `.env` (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`, default
 `admin@example.com` / `admin12345`).
 
-### Email in development
+### Email
 
-If no SMTP server is configured (blank `SMTP_HOST`), verification and password-reset
-links are **printed to the server console** instead of being emailed, so the template
-works with zero mail setup. Configure the `SMTP_*` / `MAIL_FROM` variables to send
-real email.
+Verification and password-reset links are sent via email. The transport is chosen
+automatically from your environment:
+
+1. **Resend** — set `RESEND_API_KEY` (simplest; just an API key). Sign up at
+   [resend.com](https://resend.com), verify a sending domain, and set
+   `MAIL_FROM="You <no-reply@yourdomain.com>"`. For quick tests you may use
+   `MAIL_FROM="Acme <onboarding@resend.dev>"`.
+2. **SMTP** — set `SMTP_HOST` (+ `SMTP_PORT`/`SMTP_USER`/`SMTP_PASSWORD`/`SMTP_SECURE`).
+   Works with Office 365, Gmail, Postmark, SendGrid, etc.
+3. **Console (default)** — if neither is configured, links are **printed to the server
+   console** so the template works with zero setup.
+
+Common SMTP settings:
+
+| Provider | `SMTP_HOST` | `SMTP_PORT` | `SMTP_SECURE` | Auth |
+| --- | --- | --- | --- | --- |
+| Office 365 | `smtp.office365.com` | `587` | `false` | mailbox user + password/app password |
+| Gmail | `smtp.gmail.com` | `587` | `false` | address + [App Password](https://support.google.com/accounts/answer/185833) |
+| Generic TLS | your host | `465` | `true` | user + password |
+
+**Test your configuration** at any time:
+
+```bash
+npm run email:test -- you@example.com
+```
+
+Delivery failures never break sign-up / reset flows — they are logged, and the account
+action still succeeds.
 
 ## Scripts
 
@@ -81,6 +105,7 @@ real email.
 | `npm run db:deploy`   | Apply migrations (production/CI)           |
 | `npm run db:seed`     | Seed roles + admin user                    |
 | `npm run db:release`  | Migrate then seed (used by Fly on deploy)  |
+| `npm run email:test`  | Send a test email with the current config   |
 | `npm run db:studio`   | Open Prisma Studio                         |
 | `npm run test`        | Run unit tests (Vitest)                    |
 | `npm run test:e2e`    | Run end-to-end tests (Playwright)          |
@@ -114,76 +139,142 @@ remains are the one-time actions below.
 > `.env` for development; they are never shipped to Fly (`.env` is git-ignored and
 > excluded via `.dockerignore`).
 
-### 1. Create the Supabase database
+### 1. Create the Supabase database and get the two connection strings
 
-1. Create a project at [supabase.com](https://supabase.com).
-2. In **Project Settings → Database → Connection string**, copy two URLs:
-   - **Transaction pooler** (port `6543`) → this is your `DATABASE_URL`. Append
-     `?pgbouncer=true`.
-   - **Session / direct** (port `5432`) → this is your `DIRECT_URL`.
+1. Go to [supabase.com](https://supabase.com), sign in, and click **New project**.
+2. Fill in:
+   - **Name** — anything (e.g. `codesigning`).
+   - **Database Password** — click *Generate a password* and **save it somewhere
+     safe**. This is the password that goes into both connection strings below. (If
+     you lose it, you can set a new one later under **Project Settings → Database →
+     Database password → Reset**.)
+   - **Region** — pick the one closest to your Fly region (`ams` → *West EU
+     (Ireland)* or *Central EU (Frankfurt)* is fine).
+3. Click **Create new project** and wait ~2 minutes until it finishes provisioning.
+4. Click the green **Connect** button in the top bar (or go to **Project Settings →
+   Database**). Under **Connection string → ORMs** (or the "Connection pooling"
+   section) you'll find the two strings you need. Both contain your project
+   reference (`postgres.<ref>`) and the region host:
 
-   They look like:
+   - **Transaction pooler**, port **`6543`** → your **`DATABASE_URL`**.
+     Add `?pgbouncer=true` at the end.
+   - **Session pooler / Direct connection**, port **`5432`** → your **`DIRECT_URL`**.
+
+   After substituting your saved password they look exactly like this:
 
    ```
-   DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true
-   DIRECT_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
+   DATABASE_URL=postgresql://postgres.abcd1234wxyz:MyRealPassword@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?pgbouncer=true
+   DIRECT_URL=postgresql://postgres.abcd1234wxyz:MyRealPassword@aws-0-eu-central-1.pooler.supabase.com:5432/postgres
    ```
 
-   Prisma uses the pooled `DATABASE_URL` for app queries and the direct `DIRECT_URL`
-   for migrations and seeding (see `prisma/schema.prisma`). Replace the
-   `[YOUR-PASSWORD]` placeholder with your Supabase database password — leaving the
-   placeholder (or a `localhost` URL) in place is the most common reason seeding
-   fails.
+   > **Important:** replace the `[YOUR-PASSWORD]` placeholder (and any leftover
+   > `localhost` URL) with your **real** Supabase password. A placeholder or
+   > localhost URL here is the #1 reason seeding fails. The app uses the pooled
+   > `DATABASE_URL` at runtime and the direct `DIRECT_URL` for migrations + seeding
+   > (see `prisma/schema.prisma`).
 
 ### 2. Install flyctl and log in
 
+Install the Fly CLI (only needed once per machine):
+
 ```bash
+# macOS / Linux
 curl -L https://fly.io/install.sh | sh
-fly auth login
+# Windows (PowerShell): iwr https://fly.io/install.ps1 -useb | iex
+
+fly auth login          # opens a browser to log in
+fly status              # confirms you can see the `codesigning` app
 ```
 
-The app already exists (`codesigning`), so `fly launch` is **not** needed. If you
-want to deploy under a different app name, change `app` in `fly.toml` and create it
-with `fly apps create <name>`.
+The app already exists (`codesigning`), so `fly launch` is **not** needed. Run all
+`fly` commands from the project root so it picks up `app` and `primary_region` from
+`fly.toml`. (To deploy under a different name instead, change `app` in `fly.toml`
+and run `fly apps create <name>`.)
 
-### 3. Set secrets
+### 3. Set the secrets on Fly
 
-Run from the project root (it reads the app name from `fly.toml`):
+These become environment variables inside the container at runtime and during the
+release step (migrations + seeding). Replace every `<...>` with your real values —
+paste the two Supabase strings from step 1, and choose a **strong**
+`SEED_ADMIN_PASSWORD` (this becomes your first login):
 
 ```bash
 fly secrets set \
-  DATABASE_URL="postgresql://postgres.<ref>:<pw>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true" \
-  DIRECT_URL="postgresql://postgres.<ref>:<pw>@aws-0-<region>.pooler.supabase.com:5432/postgres" \
+  DATABASE_URL="postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true" \
+  DIRECT_URL="postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres" \
   SESSION_SECRET="$(openssl rand -base64 32)" \
   APP_URL="https://codesigning.fly.dev" \
-  SEED_ADMIN_EMAIL="you@example.com" \
+  SEED_ADMIN_EMAIL="you@yourdomain.com" \
   SEED_ADMIN_PASSWORD="<a-strong-password>" \
   SEED_ADMIN_NAME="Administrator"
-# Optionally add SMTP_* / MAIL_FROM to send real verification / reset emails.
 ```
 
-### 4. Deploy (migrations + seeding run automatically)
+What each one is for:
+
+| Secret | Purpose |
+| --- | --- |
+| `DATABASE_URL` | Pooled connection the running app uses for queries (port 6543). |
+| `DIRECT_URL` | Direct connection used for migrations + seeding (port 5432). |
+| `SESSION_SECRET` | Signs/derives session values. The `openssl` command generates a random one for you. |
+| `APP_URL` | Public URL, used to build links in verification/reset emails. Use your `*.fly.dev` domain (or a custom domain once you add one). |
+| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` / `SEED_ADMIN_NAME` | The first admin account created by the seed. |
+
+Optional — to send **real** verification/reset emails (instead of logging them to the
+server console), configure an email provider. Pick one (see the [Email](#email)
+section for details):
+
+```bash
+# Option A — Resend (recommended, just an API key)
+fly secrets set \
+  RESEND_API_KEY="re_xxx" \
+  MAIL_FROM="No Reply <no-reply@yourdomain.com>"
+
+# Option B — SMTP (e.g. Office 365)
+fly secrets set \
+  SMTP_HOST="smtp.office365.com" SMTP_PORT="587" SMTP_SECURE="false" \
+  SMTP_USER="<mailbox>" SMTP_PASSWORD="<password>" \
+  MAIL_FROM="No Reply <no-reply@yourdomain.com>"
+```
+
+After deploying, confirm delivery works against the live app:
+
+```bash
+fly ssh console -C "npm run email:test -- you@yourdomain.com"
+```
+
+Verify what's set with `fly secrets list` (it shows names + digests, never values).
+Note: each `fly secrets set` triggers a new deploy automatically.
+
+### 4. Deploy — migrations + seeding run automatically
 
 ```bash
 fly deploy
 ```
 
-On every deploy, the `release_command` in `fly.toml` runs `npm run db:release`,
-which:
+During the deploy, the `release_command` in `fly.toml` runs `npm run db:release` in
+a temporary machine (with your secrets available), which:
 
-1. applies migrations (`prisma migrate deploy`), then
+1. applies the database migrations (`prisma migrate deploy`), then
 2. seeds the roles (ADMIN/MANAGER/USER) and the initial admin from `SEED_ADMIN_*`.
 
 Both use the direct `DIRECT_URL` connection and are idempotent, so re-deploying is
-safe. Fly checks `/api/health` to confirm the app is healthy. As a safety measure,
-seeding **refuses to run in production** unless a non-default `SEED_ADMIN_PASSWORD`
-secret is set — so make sure you set it in step 3.
+safe. As a safety measure, seeding **refuses to run in production** unless a
+non-default `SEED_ADMIN_PASSWORD` is set — so make sure step 3 is done first.
 
-Once the deploy is green, sign in at `https://codesigning.fly.dev` with the
-`SEED_ADMIN_*` credentials. You do not need to seed manually.
+Watch/verify the deploy:
 
-If you ever want to (re-)seed by hand — for example after changing `SEED_ADMIN_*` —
-run it against the live app:
+```bash
+fly logs        # stream logs; look for the release step running db:release
+fly status      # machine + health-check state (checks GET /api/health)
+fly open        # open https://codesigning.fly.dev in your browser
+```
+
+When the deploy is green, open the app and **sign in with your `SEED_ADMIN_EMAIL` /
+`SEED_ADMIN_PASSWORD`**. That's it — you do not need to seed manually.
+
+**Re-seeding later (optional).** Seeding already runs on every deploy. If you change
+`SEED_ADMIN_*` or want to force it without a code change, run it against the live
+app:
 
 ```bash
 fly ssh console -C "npm run db:seed"

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
-import { sendMail } from "@/lib/mail";
+import { sendMailBestEffort } from "@/lib/mail";
 import { AUDIT_ACTIONS, logAudit } from "@/lib/audit";
 import {
   forgotPasswordSchema,
@@ -98,7 +98,7 @@ export async function registerAction(
 
   const token = await issueVerificationToken(email, "EMAIL_VERIFY");
   const link = `${await appUrl()}/verify-email?token=${token}`;
-  await sendMail({
+  await sendMailBestEffort({
     to: email,
     subject: "Verify your email",
     text: `Welcome! Confirm your email address by opening this link:\n\n${link}\n\nThis link expires in 24 hours.`,
@@ -200,7 +200,7 @@ export async function forgotPasswordAction(
   if (user) {
     const token = await issueVerificationToken(email, "PASSWORD_RESET");
     const link = `${await appUrl()}/reset-password?token=${token}`;
-    await sendMail({
+    await sendMailBestEffort({
       to: email,
       subject: "Reset your password",
       text: `Reset your password using this link:\n\n${link}\n\nThis link expires in 1 hour. If you did not request this, you can ignore this email.`,

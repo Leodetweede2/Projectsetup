@@ -61,12 +61,36 @@ Open http://localhost:3000 and sign in with the seeded admin credentials from
 `.env` (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`, default
 `admin@example.com` / `admin12345`).
 
-### Email in development
+### Email
 
-If no SMTP server is configured (blank `SMTP_HOST`), verification and password-reset
-links are **printed to the server console** instead of being emailed, so the template
-works with zero mail setup. Configure the `SMTP_*` / `MAIL_FROM` variables to send
-real email.
+Verification and password-reset links are sent via email. The transport is chosen
+automatically from your environment:
+
+1. **Resend** — set `RESEND_API_KEY` (simplest; just an API key). Sign up at
+   [resend.com](https://resend.com), verify a sending domain, and set
+   `MAIL_FROM="You <no-reply@yourdomain.com>"`. For quick tests you may use
+   `MAIL_FROM="Acme <onboarding@resend.dev>"`.
+2. **SMTP** — set `SMTP_HOST` (+ `SMTP_PORT`/`SMTP_USER`/`SMTP_PASSWORD`/`SMTP_SECURE`).
+   Works with Office 365, Gmail, Postmark, SendGrid, etc.
+3. **Console (default)** — if neither is configured, links are **printed to the server
+   console** so the template works with zero setup.
+
+Common SMTP settings:
+
+| Provider | `SMTP_HOST` | `SMTP_PORT` | `SMTP_SECURE` | Auth |
+| --- | --- | --- | --- | --- |
+| Office 365 | `smtp.office365.com` | `587` | `false` | mailbox user + password/app password |
+| Gmail | `smtp.gmail.com` | `587` | `false` | address + [App Password](https://support.google.com/accounts/answer/185833) |
+| Generic TLS | your host | `465` | `true` | user + password |
+
+**Test your configuration** at any time:
+
+```bash
+npm run email:test -- you@example.com
+```
+
+Delivery failures never break sign-up / reset flows — they are logged, and the account
+action still succeeds.
 
 ## Scripts
 
@@ -81,6 +105,7 @@ real email.
 | `npm run db:deploy`   | Apply migrations (production/CI)           |
 | `npm run db:seed`     | Seed roles + admin user                    |
 | `npm run db:release`  | Migrate then seed (used by Fly on deploy)  |
+| `npm run email:test`  | Send a test email with the current config   |
 | `npm run db:studio`   | Open Prisma Studio                         |
 | `npm run test`        | Run unit tests (Vitest)                    |
 | `npm run test:e2e`    | Run end-to-end tests (Playwright)          |
@@ -194,14 +219,27 @@ What each one is for:
 | `APP_URL` | Public URL, used to build links in verification/reset emails. Use your `*.fly.dev` domain (or a custom domain once you add one). |
 | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` / `SEED_ADMIN_NAME` | The first admin account created by the seed. |
 
-Optional — to send **real** verification/reset emails instead of logging them to the
-server console, also set your SMTP details:
+Optional — to send **real** verification/reset emails (instead of logging them to the
+server console), configure an email provider. Pick one (see the [Email](#email)
+section for details):
 
 ```bash
+# Option A — Resend (recommended, just an API key)
 fly secrets set \
-  SMTP_HOST="smtp.yourprovider.com" SMTP_PORT="587" SMTP_SECURE="false" \
-  SMTP_USER="<smtp-user>" SMTP_PASSWORD="<smtp-pass>" \
+  RESEND_API_KEY="re_xxx" \
   MAIL_FROM="No Reply <no-reply@yourdomain.com>"
+
+# Option B — SMTP (e.g. Office 365)
+fly secrets set \
+  SMTP_HOST="smtp.office365.com" SMTP_PORT="587" SMTP_SECURE="false" \
+  SMTP_USER="<mailbox>" SMTP_PASSWORD="<password>" \
+  MAIL_FROM="No Reply <no-reply@yourdomain.com>"
+```
+
+After deploying, confirm delivery works against the live app:
+
+```bash
+fly ssh console -C "npm run email:test -- you@yourdomain.com"
 ```
 
 Verify what's set with `fly secrets list` (it shows names + digests, never values).

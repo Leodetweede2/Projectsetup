@@ -9,6 +9,8 @@ import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 
 type Row = Record<string, unknown>;
 type XLSXModule = typeof import("xlsx");
+type WorkBook = import("xlsx").WorkBook;
+type WorkSheet = import("xlsx").WorkSheet;
 
 const GUESS = /ruimte|room|kamer|locatie|location/i;
 
@@ -19,18 +21,8 @@ function decodeText(bytes: Uint8Array): string {
   return new TextDecoder("utf-8").decode(bytes);
 }
 
-/**
- * Read the first sheet of a parsed workbook into { columns, rows }. Recomputes
- * the used range from the actual cells and takes columns positionally from the
- * header row, so every column is captured.
- */
-function readFirstSheet(XLSX: XLSXModule, wb: import("xlsx").WorkBook): {
-  cols: string[];
-  rows: Row[];
-} {
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  if (!ws) return { cols: [], rows: [] };
-
+/** Recompute a sheet's used range from its actual cells (fixes a stale/narrow !ref). */
+function computeRange(XLSX: XLSXModule, ws: WorkSheet) {
   const range = XLSX.utils.decode_range(ws["!ref"] ?? "A1");
   for (const addr of Object.keys(ws)) {
     if (addr[0] === "!") continue;
@@ -41,17 +33,32 @@ function readFirstSheet(XLSX: XLSXModule, wb: import("xlsx").WorkBook): {
     if (c < range.s.c) range.s.c = c;
   }
   ws["!ref"] = XLSX.utils.encode_range(range);
+  return range;
+}
 
+/** Column headers of a sheet, taken positionally from the header row. */
+function sheetHeaders(XLSX: XLSXModule, ws: WorkSheet | undefined): string[] {
+  if (!ws || !ws["!ref"]) return [];
+  const range = computeRange(XLSX, ws);
+  const out: string[] = [];
+  for (let c = range.s.c; c <= range.e.c; c++) {
+    const cell = ws[XLSX.utils.encode_cell({ r: range.s.r, c })];
+    const name = cell ? String(cell.w ?? cell.v ?? "").trim() : "";
+    out.push(name || `Column ${c - range.s.c + 1}`);
+  }
+  return out;
+}
+
+/** Full parse of a sheet into { columns, rows }. */
+function sheetData(XLSX: XLSXModule, ws: WorkSheet | undefined): { cols: string[]; rows: Row[] } {
+  const cols = sheetHeaders(XLSX, ws);
+  if (!ws || cols.length === 0) return { cols: [], rows: [] };
   const aoa = XLSX.utils.sheet_to_json(ws, {
     header: 1,
     blankrows: false,
     defval: "",
     raw: false,
   }) as unknown[][];
-  if (aoa.length < 2) return { cols: [], rows: [] };
-
-  const headerRow = aoa[0] ?? [];
-  const cols = headerRow.map((h, i) => String(h ?? "").trim() || `Column ${i + 1}`);
   const rows: Row[] = aoa.slice(1).map((arr) => {
     const obj: Row = {};
     cols.forEach((col, i) => {
@@ -64,46 +71,71 @@ function readFirstSheet(XLSX: XLSXModule, wb: import("xlsx").WorkBook): {
 }
 
 /**
- * Parse any tabular export into columns + rows, regardless of whether it is a
- * real xlsx/xls or a mislabelled text export (CSV/TSV/HTML, UTF-8 or UTF-16).
- * Tries multiple strategies and keeps whichever yields the most columns.
+ * Parse any tabular export into a workbook, regardless of whether it is a real
+ * xlsx/xls or a mislabelled text export (CSV/TSV/HTML, UTF-8 or UTF-16). For
+ * text, tries several delimiters and keeps whichever yields the most columns.
  */
-function parseTabular(XLSX: XLSXModule, buf: ArrayBuffer): { cols: string[]; rows: Row[] } {
+function readWorkbook(XLSX: XLSXModule, buf: ArrayBuffer): WorkBook | null {
   const bytes = new Uint8Array(buf);
   const isZip = bytes[0] === 0x50 && bytes[1] === 0x4b; // xlsx (PK zip)
   const isOle = bytes[0] === 0xd0 && bytes[1] === 0xcf; // xls (OLE)
 
-  const candidates: { cols: string[]; rows: Row[] }[] = [];
-  const tryPush = (fn: () => { cols: string[]; rows: Row[] }) => {
+  if (isZip || isOle) {
+    try {
+      return XLSX.read(buf, { type: "array", cellDates: true });
+    } catch {
+      return null;
+    }
+  }
+
+  const text = decodeText(bytes);
+  const candidates: WorkBook[] = [];
+  const tryPush = (fn: () => WorkBook) => {
     try {
       candidates.push(fn());
     } catch {
-      /* ignore this strategy */
+      /* ignore */
     }
   };
+  tryPush(() => XLSX.read(text, { type: "string", cellDates: true }));
+  for (const FS of ["\t", ";", ","]) {
+    tryPush(() => XLSX.read(text, { type: "string", FS, cellDates: true }));
+  }
 
-  if (isZip || isOle) {
-    tryPush(() => readFirstSheet(XLSX, XLSX.read(buf, { type: "array", cellDates: true })));
-  } else {
-    const text = decodeText(bytes);
-    // Auto (SheetJS sniffs HTML tables and CSV delimiters)…
-    tryPush(() => readFirstSheet(XLSX, XLSX.read(text, { type: "string", cellDates: true })));
-    // …plus explicit delimiters for tab / semicolon / comma exports.
-    for (const FS of ["\t", ";", ","]) {
-      tryPush(() => readFirstSheet(XLSX, XLSX.read(text, { type: "string", FS, cellDates: true })));
+  let best: WorkBook | null = null;
+  let bestCols = -1;
+  for (const wb of candidates) {
+    const n = sheetHeaders(XLSX, wb.Sheets[wb.SheetNames[0]]).length;
+    if (n > bestCols) {
+      bestCols = n;
+      best = wb;
     }
   }
-  // Last resort: let SheetJS guess from the raw bytes.
-  tryPush(() => readFirstSheet(XLSX, XLSX.read(buf, { type: "array", cellDates: true })));
+  return best;
+}
 
-  const best = candidates
-    .filter((c) => c.cols.length > 0)
-    .sort((a, b) => b.cols.length - a.cols.length)[0];
-  return best ?? { cols: [], rows: [] };
+/** Choose a sensible default sheet: first with a room-ish column, else most columns. */
+function defaultSheet(XLSX: XLSXModule, wb: WorkBook): string {
+  for (const name of wb.SheetNames) {
+    if (sheetHeaders(XLSX, wb.Sheets[name]).some((c) => GUESS.test(c))) return name;
+  }
+  let best = wb.SheetNames[0];
+  let bestN = -1;
+  for (const name of wb.SheetNames) {
+    const n = sheetHeaders(XLSX, wb.Sheets[name]).length;
+    if (n > bestN) {
+      bestN = n;
+      best = name;
+    }
+  }
+  return best;
 }
 
 export function ImportAssetList() {
   const router = useRouter();
+  const [wb, setWb] = useState<WorkBook | null>(null);
+  const [sheetNames, setSheetNames] = useState<string[]>([]);
+  const [sheet, setSheet] = useState("");
   const [filename, setFilename] = useState("");
   const [columns, setColumns] = useState<string[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
@@ -111,6 +143,13 @@ export function ImportAssetList() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  function applySheet(XLSX: XLSXModule, workbook: WorkBook, name: string) {
+    const { cols, rows: parsed } = sheetData(XLSX, workbook.Sheets[name]);
+    setColumns(cols);
+    setRows(parsed);
+    setRoomCol(cols.find((c) => GUESS.test(c)) ?? cols[0] ?? "");
+  }
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -120,20 +159,28 @@ export function ImportAssetList() {
     try {
       const XLSX = await import("xlsx");
       const buf = await file.arrayBuffer();
-      const { cols, rows: parsed } = parseTabular(XLSX, buf);
-
-      if (cols.length === 0 || parsed.length === 0) {
-        setError("Could not read any columns/rows from that file.");
+      const workbook = readWorkbook(XLSX, buf);
+      if (!workbook || workbook.SheetNames.length === 0) {
+        setError("Could not read that file.");
         return;
       }
-
+      const name = defaultSheet(XLSX, workbook);
       setFilename(file.name);
-      setColumns(cols);
-      setRows(parsed);
-      setRoomCol(cols.find((c) => GUESS.test(c)) ?? cols[0]);
+      setWb(workbook);
+      setSheetNames(workbook.SheetNames);
+      setSheet(name);
+      applySheet(XLSX, workbook, name);
     } catch (err) {
       setError(`Could not read the file: ${err instanceof Error ? err.message : String(err)}`);
     }
+  }
+
+  async function onSheetChange(name: string) {
+    if (!wb) return;
+    setSheet(name);
+    setSuccess(null);
+    const XLSX = await import("xlsx");
+    applySheet(XLSX, wb, name);
   }
 
   async function onImport() {
@@ -157,9 +204,11 @@ export function ImportAssetList() {
       if (!res.ok) {
         throw new Error(data.error ?? `Import failed (HTTP ${res.status})`);
       }
-      setSuccess(`Imported ${data.rowCount} rows from ${filename}.`);
+      setSuccess(`Imported ${data.rowCount} rows from ${filename} (sheet "${sheet}").`);
       setRows([]);
       setColumns([]);
+      setSheetNames([]);
+      setWb(null);
       setFilename("");
       router.refresh();
     } catch (err) {
@@ -181,11 +230,32 @@ export function ImportAssetList() {
         <input
           id="xlsx"
           type="file"
-          accept=".xlsx,.xls,.csv"
+          accept=".xlsx,.xls,.csv,.tsv,.txt"
           onChange={onFile}
           className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-brand-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-700"
         />
       </div>
+
+      {sheetNames.length > 1 && (
+        <div>
+          <Label htmlFor="sheet">Sheet</Label>
+          <select
+            id="sheet"
+            value={sheet}
+            onChange={(e) => onSheetChange(e.target.value)}
+            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+          >
+            {sheetNames.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-slate-400">
+            This workbook has {sheetNames.length} sheets — pick the one with your PC list.
+          </p>
+        </div>
+      )}
 
       {columns.length > 0 && (
         <>

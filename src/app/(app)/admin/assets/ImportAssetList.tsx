@@ -8,8 +8,99 @@ import { Alert } from "@/components/ui/Alert";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 
 type Row = Record<string, unknown>;
+type XLSXModule = typeof import("xlsx");
 
 const GUESS = /ruimte|room|kamer|locatie|location/i;
+
+/** Decode a byte buffer to text, honouring a UTF-16 BOM (common in exports). */
+function decodeText(bytes: Uint8Array): string {
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) return new TextDecoder("utf-16le").decode(bytes);
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) return new TextDecoder("utf-16be").decode(bytes);
+  return new TextDecoder("utf-8").decode(bytes);
+}
+
+/**
+ * Read the first sheet of a parsed workbook into { columns, rows }. Recomputes
+ * the used range from the actual cells and takes columns positionally from the
+ * header row, so every column is captured.
+ */
+function readFirstSheet(XLSX: XLSXModule, wb: import("xlsx").WorkBook): {
+  cols: string[];
+  rows: Row[];
+} {
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  if (!ws) return { cols: [], rows: [] };
+
+  const range = XLSX.utils.decode_range(ws["!ref"] ?? "A1");
+  for (const addr of Object.keys(ws)) {
+    if (addr[0] === "!") continue;
+    const { r, c } = XLSX.utils.decode_cell(addr);
+    if (r > range.e.r) range.e.r = r;
+    if (c > range.e.c) range.e.c = c;
+    if (r < range.s.r) range.s.r = r;
+    if (c < range.s.c) range.s.c = c;
+  }
+  ws["!ref"] = XLSX.utils.encode_range(range);
+
+  const aoa = XLSX.utils.sheet_to_json(ws, {
+    header: 1,
+    blankrows: false,
+    defval: "",
+    raw: false,
+  }) as unknown[][];
+  if (aoa.length < 2) return { cols: [], rows: [] };
+
+  const headerRow = aoa[0] ?? [];
+  const cols = headerRow.map((h, i) => String(h ?? "").trim() || `Column ${i + 1}`);
+  const rows: Row[] = aoa.slice(1).map((arr) => {
+    const obj: Row = {};
+    cols.forEach((col, i) => {
+      const v = arr[i];
+      obj[col] = v == null ? "" : String(v);
+    });
+    return obj;
+  });
+  return { cols, rows };
+}
+
+/**
+ * Parse any tabular export into columns + rows, regardless of whether it is a
+ * real xlsx/xls or a mislabelled text export (CSV/TSV/HTML, UTF-8 or UTF-16).
+ * Tries multiple strategies and keeps whichever yields the most columns.
+ */
+function parseTabular(XLSX: XLSXModule, buf: ArrayBuffer): { cols: string[]; rows: Row[] } {
+  const bytes = new Uint8Array(buf);
+  const isZip = bytes[0] === 0x50 && bytes[1] === 0x4b; // xlsx (PK zip)
+  const isOle = bytes[0] === 0xd0 && bytes[1] === 0xcf; // xls (OLE)
+
+  const candidates: { cols: string[]; rows: Row[] }[] = [];
+  const tryPush = (fn: () => { cols: string[]; rows: Row[] }) => {
+    try {
+      candidates.push(fn());
+    } catch {
+      /* ignore this strategy */
+    }
+  };
+
+  if (isZip || isOle) {
+    tryPush(() => readFirstSheet(XLSX, XLSX.read(buf, { type: "array", cellDates: true })));
+  } else {
+    const text = decodeText(bytes);
+    // Auto (SheetJS sniffs HTML tables and CSV delimiters)…
+    tryPush(() => readFirstSheet(XLSX, XLSX.read(text, { type: "string", cellDates: true })));
+    // …plus explicit delimiters for tab / semicolon / comma exports.
+    for (const FS of ["\t", ";", ","]) {
+      tryPush(() => readFirstSheet(XLSX, XLSX.read(text, { type: "string", FS, cellDates: true })));
+    }
+  }
+  // Last resort: let SheetJS guess from the raw bytes.
+  tryPush(() => readFirstSheet(XLSX, XLSX.read(buf, { type: "array", cellDates: true })));
+
+  const best = candidates
+    .filter((c) => c.cols.length > 0)
+    .sort((a, b) => b.cols.length - a.cols.length)[0];
+  return best ?? { cols: [], rows: [] };
+}
 
 export function ImportAssetList() {
   const router = useRouter();
@@ -29,49 +120,12 @@ export function ImportAssetList() {
     try {
       const XLSX = await import("xlsx");
       const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, { type: "array", cellDates: true });
-      const ws = wb.Sheets[wb.SheetNames[0]];
+      const { cols, rows: parsed } = parseTabular(XLSX, buf);
 
-      // Recompute the used range from the actual cells, so no columns are
-      // dropped because of a stale/narrow "!ref" written by the exporter.
-      const range = XLSX.utils.decode_range(ws["!ref"] ?? "A1");
-      for (const addr of Object.keys(ws)) {
-        if (addr[0] === "!") continue;
-        const { r, c } = XLSX.utils.decode_cell(addr);
-        if (r > range.e.r) range.e.r = r;
-        if (c > range.e.c) range.e.c = c;
-        if (r < range.s.r) range.s.r = r;
-        if (c < range.s.c) range.s.c = c;
-      }
-      ws["!ref"] = XLSX.utils.encode_range(range);
-
-      // Read the raw grid; take columns positionally from the header row so
-      // every column is captured (even where the first data row is empty).
-      const aoa = XLSX.utils.sheet_to_json(ws, {
-        header: 1,
-        blankrows: false,
-        defval: "",
-        raw: false,
-      }) as unknown[][];
-
-      if (aoa.length < 2) {
-        setError("That file has no data rows.");
+      if (cols.length === 0 || parsed.length === 0) {
+        setError("Could not read any columns/rows from that file.");
         return;
       }
-
-      const headerRow = aoa[0] ?? [];
-      const cols = headerRow.map((h, i) => {
-        const name = String(h ?? "").trim();
-        return name === "" ? `Column ${i + 1}` : name;
-      });
-      const parsed: Row[] = aoa.slice(1).map((arr) => {
-        const obj: Row = {};
-        cols.forEach((col, i) => {
-          const v = arr[i];
-          obj[col] = v == null ? "" : String(v);
-        });
-        return obj;
-      });
 
       setFilename(file.name);
       setColumns(cols);

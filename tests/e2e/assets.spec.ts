@@ -25,19 +25,19 @@ test("asset list overview shows rows and links matched rooms to the map", async 
   const unmatched = page.getByRole("row", { name: /AMP-PC-9999/ });
   await expect(unmatched.getByText("not on a map")).toBeVisible();
 
-  // Search filters across columns.
-  await page.getByPlaceholder(/Search room/).fill("Jansen");
-  await page.getByRole("button", { name: "Search" }).click();
+  // Global search filters across columns (client-side, live).
+  await page.getByPlaceholder(/Search all columns/).fill("Jansen");
   await expect(page.getByText("AMP-PC-0510")).toBeVisible();
   await expect(page.getByText("AMP-PC-0333")).toHaveCount(0);
 });
 
-test("the room viewer shows asset-list rows for that room", async ({ page }) => {
+test("the map shows the PCs for a room in the side panel", async ({ page }) => {
   await signInAsAdmin(page);
-  await page.goto("/find/demo-room-1"); // H1.001
-  await expect(page.getByText(/From the asset list/)).toBeVisible();
-  // The value appears in the asset-list table (and also in the device list).
-  await expect(page.getByRole("cell", { name: "Balie 1" })).toBeVisible();
+  await page.goto("/map?room=demo-room-1"); // H1.001
+  await expect(page.getByRole("heading", { name: "H1.001" })).toBeVisible();
+  await expect(page.getByText("PCs in this room")).toBeVisible();
+  // The asset row value for this room appears in the panel.
+  await expect(page.getByText("Balie 1")).toBeVisible();
 });
 
 test("importing an Excel export replaces the current list", async ({ page }) => {

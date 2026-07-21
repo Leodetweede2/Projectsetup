@@ -1,9 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import {
+  TransformWrapper,
+  TransformComponent,
+  type ReactZoomPanPinchRef,
+} from "react-zoom-pan-pinch";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import type { BrowseRoom } from "@/lib/maps/browse";
@@ -15,46 +19,76 @@ interface PlanOption {
   floor: string | null;
 }
 
+export interface SearchResult {
+  roomId: string;
+  number: string;
+  planLabel: string;
+  matchedBy: "room" | "device";
+  deviceName?: string;
+}
+
 interface Props {
   planId: string;
   planName: string;
   plans: PlanOption[];
   rooms: BrowseRoom[];
+  assetColumns: string[];
+  assetRoomColumn: string | null;
+  query: string;
+  searchResults: SearchResult[];
+  initialRoomId: string | null;
 }
 
-const pcCount = (r: BrowseRoom) => r.devices.length + r.assetCount;
+const pcCount = (r: BrowseRoom) => r.devices.length + r.assets.length;
 
 function planOptionLabel(p: PlanOption) {
   const loc = [p.building && `Bldg ${p.building}`, p.floor && `Fl ${p.floor}`].filter(Boolean).join(" · ");
   return loc ? `${p.name} — ${loc}` : p.name;
 }
 
-export function PlanBrowser({ planId, planName, plans, rooms }: Props) {
+export function PlanBrowser({
+  planId,
+  planName,
+  plans,
+  rooms,
+  assetColumns,
+  assetRoomColumn,
+  query,
+  searchResults,
+  initialRoomId,
+}: Props) {
   const router = useRouter();
-  const [query, setQuery] = useState("");
   const [onlyPcs, setOnlyPcs] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialRoomId);
+  const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
 
-  const q = query.trim().toLowerCase();
-  const matches = useMemo(() => {
-    const set = new Set<string>();
-    for (const r of rooms) {
-      const hit =
-        !q ||
-        r.number.toLowerCase().includes(q) ||
-        (r.name?.toLowerCase().includes(q) ?? false) ||
-        (r.department?.toLowerCase().includes(q) ?? false);
-      if (hit && (!onlyPcs || pcCount(r) > 0)) set.add(r.id);
+  // When arriving from a search, select and zoom to the target room.
+  useEffect(() => {
+    if (!initialRoomId) return;
+    setSelectedId(initialRoomId);
+    const el = document.getElementById(`pin-${initialRoomId}`);
+    if (el && transformRef.current) {
+      const t = setTimeout(() => transformRef.current?.zoomToElement(el, 3, 500), 200);
+      return () => clearTimeout(t);
     }
-    return set;
-  }, [rooms, q, onlyPcs]);
+  }, [initialRoomId]);
 
   const selected = rooms.find((r) => r.id === selectedId) ?? null;
   const imageUrl = `/api/floorplans/${planId}/image`;
-  const filterActive = q.length > 0 || onlyPcs;
+
+  const shownRooms = useMemo(
+    () => (onlyPcs ? rooms.filter((r) => pcCount(r) > 0) : rooms),
+    [rooms, onlyPcs],
+  );
+  const shownIds = useMemo(() => new Set(shownRooms.map((r) => r.id)), [shownRooms]);
+
+  const assetCols = useMemo(
+    () => assetColumns.filter((c) => c !== assetRoomColumn),
+    [assetColumns, assetRoomColumn],
+  );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
+    <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           <select
@@ -68,12 +102,17 @@ export function PlanBrowser({ planId, planName, plans, rooms }: Props) {
               </option>
             ))}
           </select>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Filter rooms / PCs…"
-            className="h-10 w-56 rounded-md border border-slate-300 px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
-          />
+          <form method="get" action="/map" className="flex items-center gap-2">
+            <input
+              name="q"
+              defaultValue={query}
+              placeholder="Search room or PC (all plans)…"
+              className="h-10 w-64 rounded-md border border-slate-300 px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+            />
+            <Button type="submit" size="sm">
+              Search
+            </Button>
+          </form>
           <label className="flex items-center gap-2 text-sm text-slate-600">
             <input
               type="checkbox"
@@ -83,10 +122,16 @@ export function PlanBrowser({ planId, planName, plans, rooms }: Props) {
             />
             Only rooms with PCs
           </label>
-          <span className="text-sm text-slate-500">{matches.size} shown</span>
         </div>
 
-        <TransformWrapper initialScale={1} minScale={0.5} maxScale={10} centerOnInit doubleClick={{ disabled: true }}>
+        <TransformWrapper
+          ref={transformRef}
+          initialScale={1}
+          minScale={0.5}
+          maxScale={12}
+          centerOnInit
+          doubleClick={{ disabled: true }}
+        >
           {({ zoomIn, zoomOut, resetTransform }) => (
             <div>
               <div className="mb-2 flex gap-2">
@@ -114,12 +159,13 @@ export function PlanBrowser({ planId, planName, plans, rooms }: Props) {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={imageUrl} alt={planName} className="block w-full" />
                   {rooms.map((room) => {
-                    const shown = matches.has(room.id);
+                    const shown = shownIds.has(room.id);
                     const hasPcs = pcCount(room) > 0;
                     const isSel = room.id === selectedId;
                     return (
                       <button
                         key={room.id}
+                        id={`pin-${room.id}`}
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -130,8 +176,8 @@ export function PlanBrowser({ planId, planName, plans, rooms }: Props) {
                         style={{
                           left: `${room.x * 100}%`,
                           top: `${room.y * 100}%`,
-                          opacity: filterActive && !shown ? 0.15 : 1,
-                          pointerEvents: filterActive && !shown ? "none" : "auto",
+                          opacity: shown ? 1 : 0.15,
+                          pointerEvents: shown ? "auto" : "none",
                           zIndex: isSel ? 20 : hasPcs ? 10 : 1,
                         }}
                       >
@@ -152,7 +198,7 @@ export function PlanBrowser({ planId, planName, plans, rooms }: Props) {
                   })}
                 </div>
               </TransformComponent>
-              <p className="mt-2 flex items-center gap-3 text-xs text-slate-500">
+              <p className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
                 <span className="flex items-center gap-1">
                   <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-600" /> has PCs
                 </span>
@@ -167,6 +213,26 @@ export function PlanBrowser({ planId, planName, plans, rooms }: Props) {
       </div>
 
       <div className="space-y-4">
+        {query && searchResults.length > 1 && (
+          <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
+            <p className="mb-2 font-medium text-slate-700">{searchResults.length} matches</p>
+            <ul className="space-y-1">
+              {searchResults.slice(0, 25).map((r) => (
+                <li key={r.roomId}>
+                  <Link href={`/map?room=${r.roomId}`} className="text-brand-600 hover:underline">
+                    {r.number}
+                  </Link>
+                  <span className="text-slate-400">
+                    {" "}
+                    — {r.planLabel}
+                    {r.matchedBy === "device" && r.deviceName ? ` · PC ${r.deviceName}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {selected ? (
           <div className="rounded-lg border border-slate-200 bg-white p-4">
             <div className="flex items-center justify-between gap-2">
@@ -182,9 +248,16 @@ export function PlanBrowser({ planId, planName, plans, rooms }: Props) {
                 {[selected.name, selected.department].filter(Boolean).join(" · ")}
               </p>
             )}
-            {selected.devices.length > 0 && (
-              <div className="mt-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">PCs</p>
+
+            <div className="mt-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                PCs in this room
+              </p>
+              {selected.assets.length === 0 && selected.devices.length === 0 && (
+                <p className="mt-1 text-sm text-slate-500">No PCs recorded for this room.</p>
+              )}
+
+              {selected.devices.length > 0 && (
                 <ul className="mt-1 space-y-0.5 text-sm text-slate-700">
                   {selected.devices.map((d) => (
                     <li key={d.id}>
@@ -193,24 +266,28 @@ export function PlanBrowser({ planId, planName, plans, rooms }: Props) {
                     </li>
                   ))}
                 </ul>
+              )}
+
+              <div className="mt-2 max-h-96 space-y-2 overflow-auto">
+                {selected.assets.map((row, i) => (
+                  <div key={i} className="rounded border border-slate-200 p-2 text-sm">
+                    {assetCols
+                      .filter((c) => (row[c] ?? "").trim())
+                      .map((c) => (
+                        <div key={c} className="flex justify-between gap-3">
+                          <span className="text-slate-400">{c}</span>
+                          <span className="text-right font-medium text-slate-700">{row[c]}</span>
+                        </div>
+                      ))}
+                  </div>
+                ))}
               </div>
-            )}
-            {selected.assetCount > 0 && (
-              <p className="mt-3 text-sm text-slate-600">
-                {selected.assetCount} row(s) in the asset list.
-              </p>
-            )}
-            <Link
-              href={`/find/${selected.id}`}
-              className="mt-3 inline-block text-sm font-medium text-brand-600 hover:underline"
-            >
-              Open full details →
-            </Link>
+            </div>
           </div>
         ) : (
           <div className="rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-500">
-            Click a pin on the plan to see the room and its PCs. Use the filter to find a
-            specific room, or switch to another floor plan above.
+            Click a pin on the plan to see the room and the PCs in it. Search above to jump to a
+            specific room or PC, or switch to another floor plan.
           </div>
         )}
       </div>

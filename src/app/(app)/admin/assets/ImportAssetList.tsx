@@ -232,7 +232,7 @@ export function ImportAssetList() {
           type="file"
           accept=".xlsx,.xls,.csv,.tsv,.txt"
           onChange={onFile}
-          className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-brand-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-700"
+          className="block w-full text-sm text-ink-muted file:mr-3 file:rounded-md file:border-0 file:bg-brand-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-700"
         />
       </div>
 
@@ -243,7 +243,7 @@ export function ImportAssetList() {
             id="sheet"
             value={sheet}
             onChange={(e) => onSheetChange(e.target.value)}
-            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+            className="h-10 rounded-md border border-line bg-surface px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
           >
             {sheetNames.map((n) => (
               <option key={n} value={n}>
@@ -251,7 +251,7 @@ export function ImportAssetList() {
               </option>
             ))}
           </select>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-ink-faint">
             This workbook has {sheetNames.length} sheets — pick the one with your PC list.
           </p>
         </div>
@@ -266,7 +266,7 @@ export function ImportAssetList() {
                 id="roomcol"
                 value={roomCol}
                 onChange={(e) => setRoomCol(e.target.value)}
-                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+                className="h-10 rounded-md border border-line bg-surface px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
               >
                 {columns.map((c) => (
                   <option key={c} value={c}>
@@ -275,13 +275,13 @@ export function ImportAssetList() {
                 ))}
               </select>
             </div>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-ink-faint">
               {rows.length} rows · {columns.length} columns
             </p>
           </div>
 
           <div>
-            <p className="mb-1.5 text-sm font-medium text-slate-700">Preview (first 5 rows)</p>
+            <p className="mb-1.5 text-sm font-medium text-ink-muted">Preview (first 5 rows)</p>
             <Table>
               <THead>
                 <TR>
@@ -308,7 +308,7 @@ export function ImportAssetList() {
           <Button type="button" onClick={onImport} disabled={busy}>
             {busy ? "Importing…" : `Import ${rows.length} rows`}
           </Button>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-ink-faint">
             Importing replaces the current list with this file&apos;s contents.
           </p>
         </>

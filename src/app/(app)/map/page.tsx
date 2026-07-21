@@ -19,9 +19,9 @@ export default async function MapPage({
   if (plans.length === 0) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold text-slate-900">Map</h1>
+        <h1 className="text-2xl font-bold text-ink">Map</h1>
         <Card>
-          <CardBody className="text-slate-500">
+          <CardBody className="text-ink-faint">
             No floor plans yet. An administrator can upload one under Admin → Floor plans.
           </CardBody>
         </Card>
@@ -61,8 +61,8 @@ export default async function MapPage({
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Map</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-2xl font-bold text-ink">Map</h1>
+        <p className="mt-1 text-sm text-ink-faint">
           Search a PC or room, browse the floor plan, and click a pin to see the PCs in that
           room.
         </p>

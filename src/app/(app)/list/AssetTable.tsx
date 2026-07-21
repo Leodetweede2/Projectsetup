@@ -59,7 +59,7 @@ export function AssetTable({ columns, rows, roomNumberColumn }: Props) {
             setPage(0);
           }}
           placeholder="Search all columns…"
-          className="h-10 w-72 rounded-md border border-slate-300 px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+          className="h-10 w-72 rounded-md border border-line px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
         />
         {activeFilters && (
           <Button
@@ -75,12 +75,12 @@ export function AssetTable({ columns, rows, roomNumberColumn }: Props) {
             Clear filters
           </Button>
         )}
-        <span className="text-sm text-slate-500">
+        <span className="text-sm text-ink-faint">
           {processed.length} of {rows.length} rows
         </span>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white">
+      <div className="rounded-xl border border-line bg-surface">
         <Table>
           <THead>
             <TR>
@@ -89,10 +89,10 @@ export function AssetTable({ columns, rows, roomNumberColumn }: Props) {
                   <button
                     type="button"
                     onClick={() => toggleSort(c)}
-                    className="flex items-center gap-1 font-medium hover:text-slate-900"
+                    className="flex items-center gap-1 font-medium hover:text-ink"
                   >
                     {c}
-                    <span className="text-slate-400">
+                    <span className="text-ink-faint">
                       {sortCol === c ? (sortDir === "asc" ? "▲" : "▼") : "↕"}
                     </span>
                   </button>
@@ -107,7 +107,7 @@ export function AssetTable({ columns, rows, roomNumberColumn }: Props) {
                     value={filters[c] ?? ""}
                     onChange={(e) => setFilter(c, e.target.value)}
                     placeholder="filter"
-                    className="h-7 w-full min-w-24 rounded border border-slate-200 px-2 text-xs font-normal focus:border-brand-500 focus:outline-none"
+                    className="h-7 w-full min-w-24 rounded border border-line px-2 text-xs font-normal focus:border-brand-500 focus:outline-none"
                   />
                 </TH>
               ))}
@@ -118,7 +118,7 @@ export function AssetTable({ columns, rows, roomNumberColumn }: Props) {
             {pageRows.map((r) => (
               <TR key={r.id}>
                 {columns.map((c) => (
-                  <TD key={c} className={c === roomNumberColumn ? "font-medium text-slate-900" : ""}>
+                  <TD key={c} className={c === roomNumberColumn ? "font-medium text-ink" : ""}>
                     {r.data[c] ?? ""}
                   </TD>
                 ))}
@@ -131,14 +131,14 @@ export function AssetTable({ columns, rows, roomNumberColumn }: Props) {
                       Show on map →
                     </Link>
                   ) : (
-                    <span className="text-slate-400">not on a map</span>
+                    <span className="text-ink-faint">not on a map</span>
                   )}
                 </TD>
               </TR>
             ))}
             {pageRows.length === 0 && (
               <TR>
-                <TD colSpan={columns.length + 1} className="py-8 text-center text-slate-400">
+                <TD colSpan={columns.length + 1} className="py-8 text-center text-ink-faint">
                   No matching rows.
                 </TD>
               </TR>
@@ -148,7 +148,7 @@ export function AssetTable({ columns, rows, roomNumberColumn }: Props) {
       </div>
 
       {pageCount > 1 && (
-        <div className="flex items-center justify-between text-sm text-slate-500">
+        <div className="flex items-center justify-between text-sm text-ink-faint">
           <span>
             Page {current + 1} of {pageCount}
           </span>

@@ -127,13 +127,13 @@ export function PlanBrowser({
               name="q"
               defaultValue={query}
               placeholder="Search room or PC (all plans)…"
-              className="h-10 w-64 rounded-md border border-slate-300 px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+              className="h-10 w-64 rounded-md border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-faint focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
             />
             <Button type="submit" size="sm">
               Search
             </Button>
           </form>
-          <label className="flex items-center gap-2 text-sm text-slate-600">
+          <label className="flex items-center gap-2 text-sm text-ink-muted">
             <input
               type="checkbox"
               checked={onlyPcs}
@@ -145,10 +145,10 @@ export function PlanBrowser({
         </div>
 
         {/* Location → floor navigation. */}
-        <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3">
+        <div className="space-y-2 rounded-lg border border-line bg-surface p-3">
           {locations.length > 1 && (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <span className="text-xs font-semibold uppercase tracking-wide text-ink-faint">
                 Location
               </span>
               {locations.map((loc) => {
@@ -163,7 +163,7 @@ export function PlanBrowser({
                       "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                       active
                         ? "bg-brand-600 text-white"
-                        : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+                        : "bg-surface-2 text-ink-muted hover:bg-surface hover:text-ink",
                     ].join(" ")}
                   >
                     {loc.name}
@@ -173,7 +173,7 @@ export function PlanBrowser({
             </div>
           )}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <span className="text-xs font-semibold uppercase tracking-wide text-ink-faint">
               Floor
             </span>
             {floorsHere.map((p) => {
@@ -187,8 +187,8 @@ export function PlanBrowser({
                   className={[
                     "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
                     active
-                      ? "border-brand-500 bg-brand-50 text-brand-700"
-                      : "border-slate-200 text-slate-600 hover:bg-slate-100",
+                      ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300"
+                      : "border-line text-ink-muted hover:bg-surface-2 hover:text-ink",
                   ].join(" ")}
                 >
                   {floorLabel(p)}
@@ -201,10 +201,18 @@ export function PlanBrowser({
         <TransformWrapper
           ref={transformRef}
           initialScale={1}
-          minScale={0.5}
+          minScale={1}
           maxScale={12}
           centerOnInit
+          limitToBounds
+          centerZoomedOut={false}
           doubleClick={{ disabled: true }}
+          wheel={{ step: 0.2 }}
+          disablePadding
+          // Stop the pan from "snapping back" after a drag: disable the
+          // momentum fling that carries (and re-aligns) the content.
+          panning={{ velocityDisabled: true }}
+          velocityAnimation={{ disabled: true }}
         >
           {({ zoomIn, zoomOut, resetTransform }) => (
             <div>
@@ -222,10 +230,11 @@ export function PlanBrowser({
               <TransformComponent
                 wrapperStyle={{
                   width: "100%",
-                  height: "76vh",
-                  background: "#f1f5f9",
+                  height: "78vh",
+                  background: "rgb(var(--surface-2))",
                   borderRadius: "0.5rem",
-                  border: "1px solid #e2e8f0",
+                  border: "1px solid rgb(var(--line))",
+                  cursor: "grab",
                 }}
                 contentClass="!w-full"
               >
@@ -272,7 +281,7 @@ export function PlanBrowser({
                   })}
                 </div>
               </TransformComponent>
-              <p className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+              <p className="mt-2 flex flex-wrap items-center gap-3 text-xs text-ink-faint">
                 <span className="flex items-center gap-1">
                   <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-600" /> has PCs
                 </span>
@@ -288,15 +297,15 @@ export function PlanBrowser({
 
       <div className="space-y-4">
         {query && searchResults.length > 1 && (
-          <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
-            <p className="mb-2 font-medium text-slate-700">{searchResults.length} matches</p>
+          <div className="rounded-lg border border-line bg-surface p-3 text-sm">
+            <p className="mb-2 font-medium text-ink-muted">{searchResults.length} matches</p>
             <ul className="space-y-1">
               {searchResults.slice(0, 25).map((r) => (
                 <li key={r.roomId}>
                   <Link href={`/map?room=${r.roomId}`} className="text-brand-600 hover:underline">
                     {r.number}
                   </Link>
-                  <span className="text-slate-400">
+                  <span className="text-ink-faint">
                     {" "}
                     — {r.planLabel}
                     {r.matchedBy === "device" && r.deviceName ? ` · PC ${r.deviceName}` : ""}
@@ -308,9 +317,9 @@ export function PlanBrowser({
         )}
 
         {selected ? (
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <div className="rounded-lg border border-line bg-surface p-4">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-lg font-semibold text-slate-900">{selected.number}</h3>
+              <h3 className="text-lg font-semibold text-ink">{selected.number}</h3>
               {pcCount(selected) > 0 ? (
                 <Badge tone="red">{pcCount(selected)} PC(s)</Badge>
               ) : (
@@ -318,25 +327,25 @@ export function PlanBrowser({
               )}
             </div>
             {(selected.name || selected.department) && (
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-ink-muted">
                 {[selected.name, selected.department].filter(Boolean).join(" · ")}
               </p>
             )}
 
             <div className="mt-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <p className="text-xs font-semibold uppercase tracking-wide text-ink-faint">
                 PCs in this room
               </p>
               {selected.assets.length === 0 && selected.devices.length === 0 && (
-                <p className="mt-1 text-sm text-slate-500">No PCs recorded for this room.</p>
+                <p className="mt-1 text-sm text-ink-faint">No PCs recorded for this room.</p>
               )}
 
               {selected.devices.length > 0 && (
-                <ul className="mt-1 space-y-0.5 text-sm text-slate-700">
+                <ul className="mt-1 space-y-0.5 text-sm text-ink-muted">
                   {selected.devices.map((d) => (
                     <li key={d.id}>
                       {d.name}
-                      {d.assetTag && <span className="text-slate-400"> · {d.assetTag}</span>}
+                      {d.assetTag && <span className="text-ink-faint"> · {d.assetTag}</span>}
                     </li>
                   ))}
                 </ul>
@@ -344,13 +353,13 @@ export function PlanBrowser({
 
               <div className="mt-2 max-h-96 space-y-2 overflow-auto">
                 {selected.assets.map((row, i) => (
-                  <div key={i} className="rounded border border-slate-200 p-2 text-sm">
+                  <div key={i} className="rounded border border-line p-2 text-sm">
                     {assetCols
                       .filter((c) => (row[c] ?? "").trim())
                       .map((c) => (
                         <div key={c} className="flex justify-between gap-3">
-                          <span className="text-slate-400">{c}</span>
-                          <span className="text-right font-medium text-slate-700">{row[c]}</span>
+                          <span className="text-ink-faint">{c}</span>
+                          <span className="text-right font-medium text-ink-muted">{row[c]}</span>
                         </div>
                       ))}
                   </div>
@@ -359,7 +368,7 @@ export function PlanBrowser({
             </div>
           </div>
         ) : (
-          <div className="rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-500">
+          <div className="rounded-lg border border-dashed border-line p-4 text-sm text-ink-faint">
             Click a pin on the plan to see the room and the PCs in it. Search above to jump to a
             specific room or PC, or switch to another floor plan.
           </div>

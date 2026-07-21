@@ -36,8 +36,8 @@ export default async function FloorPlanEditorPage({
         <Link href="/admin/floorplans" className="text-sm text-brand-600 hover:underline">
           ← Back to floor plans
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-slate-900">{plan.name}</h1>
-        <p className="text-sm text-slate-500">{planLabel(plan)}</p>
+        <h1 className="mt-2 text-2xl font-bold text-ink">{plan.name}</h1>
+        <p className="text-sm text-ink-faint">{planLabel(plan)}</p>
       </div>
 
       <Card>

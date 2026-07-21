@@ -16,8 +16,8 @@ export default async function DashboardPage() {
   return (
     <div className="max-w-6xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Welcome, {user.name}</h1>
-        <p className="mt-1 text-sm text-slate-500">You are signed in as {user.email}.</p>
+        <h1 className="text-2xl font-bold text-ink">Welcome, {user.name}</h1>
+        <p className="mt-1 text-sm text-ink-faint">You are signed in as {user.email}.</p>
       </div>
 
       {stats && (
@@ -66,8 +66,8 @@ export default async function DashboardPage() {
           <Link href="/list" className="block">
             <Card className="transition-colors hover:border-brand-300">
               <CardBody>
-                <h2 className="text-lg font-semibold text-slate-900">Asset list</h2>
-                <p className="text-sm text-slate-500">
+                <h2 className="text-lg font-semibold text-ink">Asset list</h2>
+                <p className="text-sm text-ink-faint">
                   Search, filter and sort the imported PC list.
                 </p>
               </CardBody>

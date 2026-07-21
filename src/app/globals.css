@@ -2,13 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Semantic colour tokens (RGB triplets, so Tailwind's <alpha-value> works). */
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --canvas: 241 245 249; /* slate-100 */
+  --surface: 255 255 255; /* white */
+  --surface-2: 248 250 252; /* slate-50 */
+  --line: 226 232 240; /* slate-200 */
+  --ink: 15 23 42; /* slate-900 */
+  --ink-muted: 71 85 105; /* slate-600 */
+  --ink-faint: 100 116 139; /* slate-500 */
+  color-scheme: light;
+}
+
+.dark {
+  --canvas: 2 6 23; /* slate-950 */
+  --surface: 15 23 42; /* slate-900 */
+  --surface-2: 30 41 59; /* slate-800 */
+  --line: 51 65 85; /* slate-700 */
+  --ink: 241 245 249; /* slate-100 */
+  --ink-muted: 203 213 225; /* slate-300 */
+  --ink-faint: 148 163 184; /* slate-400 */
+  color-scheme: dark;
+}
+
+html {
+  /* Optimised default density for large, high-resolution monitors
+     (e.g. 1920x1080 at 80% scaling ~ 2400x1350 CSS px). */
+  font-size: 15px;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
+  color: rgb(var(--ink));
+  background: rgb(var(--canvas));
   -webkit-font-smoothing: antialiased;
+}
+
+/* Smooth the light/dark transition for surfaces and text. */
+body,
+body * {
+  transition-property: background-color, border-color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }

@@ -43,7 +43,7 @@ export default function LoginPage() {
             Sign in
           </SubmitButton>
         </form>
-        <p className="text-center text-sm text-slate-500">
+        <p className="text-center text-sm text-ink-faint">
           Don&apos;t have an account?{" "}
           <Link href="/register" className="font-medium text-brand-600 hover:underline">
             Create one

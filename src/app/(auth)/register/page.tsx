@@ -46,7 +46,7 @@ export default function RegisterPage() {
             </SubmitButton>
           </form>
         )}
-        <p className="text-center text-sm text-slate-500">
+        <p className="text-center text-sm text-ink-faint">
           Already have an account?{" "}
           <Link href="/login" className="font-medium text-brand-600 hover:underline">
             Sign in

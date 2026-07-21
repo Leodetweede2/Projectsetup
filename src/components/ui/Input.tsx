@@ -8,9 +8,9 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
       <input
         ref={ref}
         className={cn(
-          "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900",
-          "placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200",
-          "disabled:cursor-not-allowed disabled:bg-slate-50",
+          "h-10 w-full rounded-md border border-line bg-surface px-3 text-sm text-ink",
+          "placeholder:text-ink-faint focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200",
+          "disabled:cursor-not-allowed disabled:bg-surface-2",
           className,
         )}
         {...props}
@@ -22,7 +22,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
 export function Label({ className, ...props }: LabelHTMLAttributes<HTMLLabelElement>) {
   return (
     <label
-      className={cn("mb-1.5 block text-sm font-medium text-slate-700", className)}
+      className={cn("mb-1.5 block text-sm font-medium text-ink-muted", className)}
       {...props}
     />
   );

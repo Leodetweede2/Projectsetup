@@ -8,7 +8,7 @@ export default async function AccountPage() {
 
   return (
     <div className="max-w-xl space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">Account</h1>
+      <h1 className="text-2xl font-bold text-ink">Account</h1>
 
       <Card>
         <CardHeader>

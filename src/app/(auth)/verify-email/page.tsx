@@ -20,7 +20,7 @@ export default async function VerifyEmailPage({
     <Card>
       <CardBody className="space-y-4">
         <Alert tone={result.ok ? "success" : "error"}>{result.message}</Alert>
-        <p className="text-center text-sm text-slate-500">
+        <p className="text-center text-sm text-ink-faint">
           <Link href="/login" className="font-medium text-brand-600 hover:underline">
             Continue to sign in
           </Link>

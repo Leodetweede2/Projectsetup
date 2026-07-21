@@ -8,13 +8,13 @@ export function clamp01(n: number): number {
 
 /**
  * Normalise a room number for matching (Excel value ↔ floor-plan pin).
- * Upper-cases, trims, and removes all whitespace so "h 1.001" matches "H1.001".
+ * Upper-cases and removes whitespace and separators (`_`, `-`, `.`) so that
+ * "NC_04-045_a" (PDF) matches "NC_04_045_A" (Excel) and "A0-001" matches "A0_001".
  */
 export function normalizeRoomNumber(value: unknown): string {
   return String(value ?? "")
     .toUpperCase()
-    .replace(/\s+/g, "")
-    .trim();
+    .replace(/[\s._-]/g, "");
 }
 
 /** Human label for a plan, e.g. "Building H · Floor 1" (falls back to name). */

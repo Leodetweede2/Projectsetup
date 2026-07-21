@@ -329,10 +329,14 @@ the seed) can search and view. Managing plans/pins needs `maps:write` (ADMIN).
 
 1. **Add a floor plan** — as an admin, go to **Floor plans → Upload a floor plan
    (PDF)**. The PDF is rendered to an image in your browser (pick the page for
-   multi-page PDFs), then saved.
-2. **Place room pins** — open the plan's **Edit pins** screen. Click an empty spot to
-   add a room (enter its number, optional name/department); click a pin to edit it,
-   move it, delete it, or link PCs (hostname / asset tag) to it.
+   multi-page PDFs), then saved. If the PDF has a **text layer with room codes**
+   (e.g. `NC_04_680`), the pins are **detected and placed automatically** — you'll
+   see "N detected room pins" with a toggle before saving (and an advanced field to
+   tweak the room-code pattern). PDFs without a text layer detect 0; you pin manually.
+2. **Place / adjust room pins** — open the plan's **Edit pins** screen. Auto-placed
+   pins are already there; click an empty spot to add a room, or click a pin to edit
+   it, move it, delete it, or link PCs (hostname / asset tag) to it. Rooms are linked
+   to the asset list by room number, ignoring case and `_`/`-`/`.` differences.
 3. **Find a PC** — any user opens **Find PC**, types a room number, room name,
    department, or PC name/asset tag, and clicks a result to see the location
    highlighted on the plan (with pan/zoom).

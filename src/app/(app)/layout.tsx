@@ -9,6 +9,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const nav: NavItem[] = [{ href: "/dashboard", label: "Dashboard" }];
   if (hasAnyPermission(user, [PERMISSIONS.MAPS_READ])) {
     nav.push({ href: "/find", label: "Find PC" });
+    nav.push({ href: "/map", label: "Map" });
     nav.push({ href: "/list", label: "Asset list" });
   }
   if (hasAnyPermission(user, [PERMISSIONS.MAPS_WRITE])) {

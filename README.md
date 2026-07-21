@@ -340,6 +340,9 @@ the seed) can search and view. Managing plans/pins needs `maps:write` (ADMIN).
 3. **Find a PC** — any user opens **Find PC**, types a room number, room name,
    department, or PC name/asset tag, and clicks a result to see the location
    highlighted on the plan (with pan/zoom).
+4. **Browse the map** — **Map** shows a whole floor plan with every room as a pin
+   (red = has PCs, grey = none). Switch between floor plans, filter rooms/PCs, and
+   click a pin to see its room and PCs in the side panel.
 
 A demo plan (`H1.001`–`H1.004`, with a sample PC `AMP-PC-0421`) is created by the seed
 in non-production environments so you can try it immediately.
@@ -351,10 +354,10 @@ You can couple your existing asset list (e.g. an Excel export from SharePoint) t
 1. Export the SharePoint list to Excel (`.xlsx`).
 2. As an admin, go to **Import list**, upload the file, and pick which column holds the
    **room number**. Importing replaces the previous list (re-upload whenever it changes).
-3. Everyone with access sees the data under **Asset list** (`/list`) — a searchable
-   overview of all columns. Each row links to its location on the floor plan when its
-   room number matches a placed pin, and the matching rows also appear on a room's map
-   view.
+3. Everyone with access sees the data under **Asset list** (`/list`) — an overview of
+   all columns with a global search, **per-column filters**, **click-to-sort** headers,
+   and pagination. Each row links to its location on the floor plan when its room number
+   matches a placed pin, and the matching rows also appear on a room's map view.
 
 Rows are linked to pins by room number (case- and whitespace-insensitive). The list is
 stored in the database, so no SharePoint credentials are needed — you just re-upload the

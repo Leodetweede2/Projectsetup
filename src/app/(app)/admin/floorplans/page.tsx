@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { deleteFloorPlanAction } from "@/lib/maps/actions";
 import { planLabel } from "@/lib/maps/search";
+import { getKnownRoomNumbers } from "@/lib/assets/queries";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { Button } from "@/components/ui/Button";
@@ -15,10 +16,13 @@ export const dynamic = "force-dynamic";
 export default async function FloorPlansPage() {
   await requirePermission(PERMISSIONS.MAPS_WRITE);
 
-  const plans = await prisma.floorPlan.findMany({
-    orderBy: [{ building: "asc" }, { floor: "asc" }, { name: "asc" }],
-    include: { _count: { select: { rooms: true } } },
-  });
+  const [plans, knownRoomNumbers] = await Promise.all([
+    prisma.floorPlan.findMany({
+      orderBy: [{ building: "asc" }, { floor: "asc" }, { name: "asc" }],
+      include: { _count: { select: { rooms: true } } },
+    }),
+    getKnownRoomNumbers(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -29,7 +33,7 @@ export default async function FloorPlansPage() {
           <CardTitle>Upload a floor plan (PDF)</CardTitle>
         </CardHeader>
         <CardBody>
-          <UploadFloorPlan />
+          <UploadFloorPlan knownRoomNumbers={knownRoomNumbers} />
         </CardBody>
       </Card>
 

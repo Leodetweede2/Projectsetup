@@ -47,6 +47,11 @@ function stripped(s: string): string {
   return s.replace(/\s+/g, "");
 }
 
+/** Same normalisation as normalizeRoomNumber (kept local to stay dependency-free). */
+function norm(s: string): string {
+  return s.toUpperCase().replace(/[\s._-]/g, "");
+}
+
 /**
  * Extract deduplicated room pins from a page's text items.
  * @param items text items from `page.getTextContent()`
@@ -61,6 +66,12 @@ export function extractRoomPins(
   width: number,
   height: number,
   pattern: RegExp = DEFAULT_ROOM_PATTERN,
+  /**
+   * Normalised room numbers known from the imported asset list. A text token
+   * that matches one of these is treated as a room, regardless of its format —
+   * so detection works for any numbering scheme present in the asset list.
+   */
+  knownNumbers?: Set<string>,
 ): ExtractedRoom[] {
   const points = items
     .map((it) => {
@@ -69,7 +80,8 @@ export function extractRoomPins(
     })
     .filter((p) => p.s.length > 0);
 
-  const isCode = (s: string) => pattern.test(stripped(s));
+  const isCode = (s: string) =>
+    pattern.test(stripped(s)) || (knownNumbers ? knownNumbers.has(norm(s)) : false);
   const labels = points.filter((p) => !isCode(p.s));
 
   const seen = new Set<string>();

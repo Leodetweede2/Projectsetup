@@ -47,6 +47,18 @@ export async function searchAssetRecords(query: string, take = 300) {
   return { import: imp, columns: imp.columns, rows, total };
 }
 
+/** Distinct (already-normalised) room numbers from the latest import. */
+export async function getKnownRoomNumbers(): Promise<string[]> {
+  const imp = await getLatestImport();
+  if (!imp) return [];
+  const recs = await prisma.assetRecord.findMany({
+    where: { importId: imp.id },
+    select: { roomNumber: true },
+    distinct: ["roomNumber"],
+  });
+  return recs.map((r) => r.roomNumber).filter(Boolean);
+}
+
 /** All rows of the latest import, with room links — for the interactive table. */
 export async function getAllAssetRows(cap = 10000) {
   const imp = await getLatestImport();

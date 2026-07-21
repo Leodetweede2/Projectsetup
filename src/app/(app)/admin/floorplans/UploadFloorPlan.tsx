@@ -27,8 +27,9 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 const MAX_WIDTH = 4500;
 const MAX_SCALE = 4;
 
-export function UploadFloorPlan() {
+export function UploadFloorPlan({ knownRoomNumbers = [] }: { knownRoomNumbers?: string[] }) {
   const router = useRouter();
+  const knownSet = useMemo(() => new Set(knownRoomNumbers), [knownRoomNumbers]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [pageCount, setPageCount] = useState(0);
   const [page, setPage] = useState(1);
@@ -51,8 +52,15 @@ export function UploadFloorPlan() {
     } catch {
       return [];
     }
-    return extractRoomPins(textLayer.items, textLayer.transform, textLayer.width, textLayer.height, rx);
-  }, [textLayer, pattern]);
+    return extractRoomPins(
+      textLayer.items,
+      textLayer.transform,
+      textLayer.width,
+      textLayer.height,
+      rx,
+      knownSet,
+    );
+  }, [textLayer, pattern, knownSet]);
 
   async function renderPage(doc: pdfjsLib.PDFDocumentProxy, pageNumber: number) {
     const p = await doc.getPage(pageNumber);

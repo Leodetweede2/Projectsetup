@@ -31,10 +31,15 @@ describe("planLabel", () => {
 });
 
 describe("normalizeRoomNumber", () => {
-  it("upper-cases and strips whitespace so Excel values match pins", () => {
-    expect(normalizeRoomNumber("h1.001")).toBe("H1.001");
-    expect(normalizeRoomNumber("  H1.001 ")).toBe("H1.001");
-    expect(normalizeRoomNumber("H 1.001")).toBe("H1.001");
+  it("upper-cases and removes whitespace and separators", () => {
+    expect(normalizeRoomNumber("h1.001")).toBe("H1001");
+    expect(normalizeRoomNumber("  H1.001 ")).toBe("H1001");
+    expect(normalizeRoomNumber("H 1.001")).toBe("H1001");
+  });
+
+  it("bridges - / _ / . so PDF codes match Excel values", () => {
+    expect(normalizeRoomNumber("NC_04-045_a")).toBe(normalizeRoomNumber("NC_04_045_A"));
+    expect(normalizeRoomNumber("A0-001")).toBe(normalizeRoomNumber("A0_001"));
   });
 
   it("handles nullish / numeric values", () => {

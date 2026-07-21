@@ -1,11 +1,19 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as pdfjsLib from "pdfjs-dist";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, FieldError } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
+import { extractRoomPins, DEFAULT_ROOM_PATTERN, type PdfTextItem } from "@/lib/maps/pdfRooms";
+
+interface TextLayer {
+  items: PdfTextItem[];
+  transform: number[];
+  width: number;
+  height: number;
+}
 
 // pdfjs needs a worker; resolve it from the package (bundled by the build).
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -31,6 +39,20 @@ export function UploadFloorPlan() {
   const [floor, setFloor] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [textLayer, setTextLayer] = useState<TextLayer | null>(null);
+  const [autoPlace, setAutoPlace] = useState(true);
+  const [pattern, setPattern] = useState(DEFAULT_ROOM_PATTERN.source);
+
+  const detected = useMemo(() => {
+    if (!textLayer) return [];
+    let rx: RegExp;
+    try {
+      rx = new RegExp(pattern);
+    } catch {
+      return [];
+    }
+    return extractRoomPins(textLayer.items, textLayer.transform, textLayer.width, textLayer.height, rx);
+  }, [textLayer, pattern]);
 
   async function renderPage(doc: pdfjsLib.PDFDocumentProxy, pageNumber: number) {
     const p = await doc.getPage(pageNumber);
@@ -42,6 +64,14 @@ export function UploadFloorPlan() {
     canvas.height = Math.floor(viewport.height);
     const ctx = canvas.getContext("2d")!;
     await p.render({ canvas, canvasContext: ctx, viewport }).promise;
+
+    // Extract the text layer so we can auto-place room pins.
+    const tc = await p.getTextContent();
+    const items = (tc.items as Array<{ str?: string; transform?: number[] }>)
+      .filter((i) => typeof i.str === "string" && Array.isArray(i.transform))
+      .map((i) => ({ str: i.str as string, transform: i.transform as number[] }));
+    setTextLayer({ items, transform: viewport.transform, width: canvas.width, height: canvas.height });
+
     setRendered(true);
   }
 
@@ -91,6 +121,9 @@ export function UploadFloorPlan() {
       fd.set("floor", floor.trim());
       fd.set("width", String(canvas.width));
       fd.set("height", String(canvas.height));
+      if (autoPlace && detected.length > 0) {
+        fd.set("rooms", JSON.stringify(detected));
+      }
 
       const res = await fetch("/api/floorplans", { method: "POST", body: fd });
       const raw = await res.text();
@@ -176,6 +209,51 @@ export function UploadFloorPlan() {
             <Label htmlFor="fp-floor">Floor</Label>
             <Input id="fp-floor" value={floor} onChange={(e) => setFloor(e.target.value)} />
           </div>
+        </div>
+      )}
+
+      {rendered && (
+        <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm">
+          {detected.length > 0 ? (
+            <>
+              <label className="flex items-center gap-2 font-medium text-slate-800">
+                <input
+                  type="checkbox"
+                  checked={autoPlace}
+                  onChange={(e) => setAutoPlace(e.target.checked)}
+                  className="h-4 w-4"
+                />
+                Automatically place {detected.length} detected room pins
+              </label>
+              <p className="mt-1 text-slate-500">
+                Read from the PDF text layer, e.g.{" "}
+                {detected
+                  .slice(0, 4)
+                  .map((r) => r.number)
+                  .join(", ")}
+                . You can adjust them in the pin editor afterwards.
+              </p>
+            </>
+          ) : (
+            <p className="text-slate-500">
+              No room codes detected in this PDF&apos;s text layer. You can add pins
+              manually in the editor after creating the plan.
+            </p>
+          )}
+          <details className="mt-2">
+            <summary className="cursor-pointer text-xs text-slate-500">
+              Advanced: room-code pattern
+            </summary>
+            <input
+              value={pattern}
+              onChange={(e) => setPattern(e.target.value)}
+              spellCheck={false}
+              className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-xs"
+            />
+            <p className="mt-1 text-xs text-slate-400">
+              A JavaScript regular expression matched against each text token.
+            </p>
+          </details>
         </div>
       )}
 

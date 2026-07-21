@@ -58,15 +58,42 @@ export async function POST(req: Request) {
       },
     });
 
+    // Optional auto-extracted room pins (from the PDF text layer).
+    let roomCount = 0;
+    const roomsRaw = form.get("rooms");
+    if (typeof roomsRaw === "string" && roomsRaw) {
+      const clamp = (n: number) => (Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0);
+      const parsed = JSON.parse(roomsRaw) as Array<{
+        number?: unknown;
+        name?: unknown;
+        x?: unknown;
+        y?: unknown;
+      }>;
+      const data = parsed
+        .filter((r) => typeof r.number === "string" && String(r.number).trim())
+        .slice(0, 2000)
+        .map((r) => ({
+          floorPlanId: plan.id,
+          number: String(r.number).trim().slice(0, 60),
+          name: r.name ? String(r.name).slice(0, 200) : null,
+          x: clamp(Number(r.x)),
+          y: clamp(Number(r.y)),
+        }));
+      if (data.length) {
+        await prisma.room.createMany({ data });
+        roomCount = data.length;
+      }
+    }
+
     await logAudit({
       action: AUDIT_ACTIONS.FLOORPLAN_CREATED,
       actorUserId: user!.id,
       targetType: "floorplan",
       targetId: plan.id,
-      metadata: { name, building, floor },
+      metadata: { name, building, floor, roomCount },
     });
 
-    return NextResponse.json({ id: plan.id });
+    return NextResponse.json({ id: plan.id, roomCount });
   } catch (err) {
     // Always return JSON so the client can show a meaningful message instead of
     // failing on an empty error body.

@@ -1,32 +1,37 @@
 import { requireUser } from "@/lib/auth/guards";
 import { hasAnyPermission } from "@/lib/rbac/hasPermission";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
-import { AppNav, type NavItem } from "@/components/AppNav";
+import { AppNav, type NavGroup, type NavItem } from "@/components/AppNav";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
 
-  const nav: NavItem[] = [{ href: "/dashboard", label: "Dashboard" }];
+  const main: NavItem[] = [{ href: "/dashboard", label: "Dashboard" }];
   if (hasAnyPermission(user, [PERMISSIONS.MAPS_READ])) {
-    nav.push({ href: "/find", label: "Find PC" });
-    nav.push({ href: "/map", label: "Map" });
-    nav.push({ href: "/list", label: "Asset list" });
+    main.push({ href: "/map", label: "Map" });
+    main.push({ href: "/list", label: "Asset list" });
   }
+
+  const admin: NavItem[] = [];
   if (hasAnyPermission(user, [PERMISSIONS.MAPS_WRITE])) {
-    nav.push({ href: "/admin/floorplans", label: "Floor plans" });
-    nav.push({ href: "/admin/assets", label: "Import list" });
+    admin.push({ href: "/admin/floorplans", label: "Floor plans" });
+    admin.push({ href: "/admin/assets", label: "Import list" });
   }
   if (hasAnyPermission(user, [PERMISSIONS.USERS_READ, PERMISSIONS.USERS_WRITE])) {
-    nav.push({ href: "/admin/users", label: "Users" });
+    admin.push({ href: "/admin/users", label: "Users" });
   }
   if (hasAnyPermission(user, [PERMISSIONS.ROLES_READ, PERMISSIONS.ROLES_WRITE])) {
-    nav.push({ href: "/admin/roles", label: "Roles" });
+    admin.push({ href: "/admin/roles", label: "Roles" });
   }
   if (hasAnyPermission(user, [PERMISSIONS.AUDIT_READ])) {
-    nav.push({ href: "/admin/audit", label: "Audit log" });
+    admin.push({ href: "/admin/audit", label: "Audit log" });
   }
-  nav.push({ href: "/profile", label: "Profile" });
-  nav.push({ href: "/settings", label: "Settings" });
+
+  const nav: NavGroup[] = [
+    { items: main },
+    { label: "Admin", items: admin },
+    { items: [{ href: "/account", label: "Account" }] },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -54,7 +59,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
       <div className="flex w-full gap-8 px-6 py-6 lg:px-8">
         <aside className="w-56 shrink-0">
-          <AppNav items={nav} />
+          <AppNav groups={nav} />
         </aside>
         <main className="min-w-0 flex-1">{children}</main>
       </div>

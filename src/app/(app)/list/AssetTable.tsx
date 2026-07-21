@@ -125,7 +125,7 @@ export function AssetTable({ columns, rows, roomNumberColumn }: Props) {
                 <TD className="text-right">
                   {r.roomId ? (
                     <Link
-                      href={`/find/${r.roomId}`}
+                      href={`/map?room=${r.roomId}`}
                       className="font-medium text-brand-600 hover:underline"
                     >
                       Show on map →

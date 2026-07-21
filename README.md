@@ -337,12 +337,14 @@ the seed) can search and view. Managing plans/pins needs `maps:write` (ADMIN).
    pins are already there; click an empty spot to add a room, or click a pin to edit
    it, move it, delete it, or link PCs (hostname / asset tag) to it. Rooms are linked
    to the asset list by room number, ignoring case and `_`/`-`/`.` differences.
-3. **Find a PC** — any user opens **Find PC**, types a room number, room name,
-   department, or PC name/asset tag, and clicks a result to see the location
-   highlighted on the plan (with pan/zoom).
-4. **Browse the map** — **Map** shows a whole floor plan with every room as a pin
-   (red = has PCs, grey = none). Switch between floor plans, filter rooms/PCs, and
-   click a pin to see its room and PCs in the side panel.
+3. **Find a PC / browse the map** — open **Map**. Search a room number, name,
+   department, or PC name/asset tag to jump straight to the room, or browse: every
+   room is a pin (red = has PCs, grey = none). Switch between floor plans, and click a
+   pin to see the room and **exactly which PCs are in it** (from the asset list) in the
+   side panel. Pan/zoom for large plans.
+
+The **Dashboard** shows key stats (how many PCs have a location, PCs without a
+location, rooms with PCs, floor plans, etc.).
 
 A demo plan (`H1.001`–`H1.004`, with a sample PC `AMP-PC-0421`) is created by the seed
 in non-production environments so you can try it immediately.
@@ -399,9 +401,10 @@ src/
   app/
     (auth)/              # login, register, verify-email, forgot/reset-password
     (app)/               # authenticated area (layout requires a user)
-      dashboard/
-      profile/  settings/
-      admin/users/  admin/roles/  admin/audit/
+      dashboard/         # welcome + stats
+      map/  list/        # interactive map (search/browse/PCs) + asset list
+      account/           # combined profile + change password
+      admin/floorplans/  admin/assets/  admin/users/  admin/roles/  admin/audit/
     api/auth/logout/     # POST route that clears the session
     api/health/          # health check for Fly.io
     403/                 # forbidden page

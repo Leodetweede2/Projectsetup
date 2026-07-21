@@ -37,7 +37,7 @@ export function CreateUserForm({ roles }: { roles: { id: string; name: string }[
         <Label>Roles</Label>
         <div className="flex flex-wrap gap-3">
           {roles.map((role) => (
-            <label key={role.id} className="flex items-center gap-2 text-sm text-slate-700">
+            <label key={role.id} className="flex items-center gap-2 text-sm text-ink-muted">
               <input type="checkbox" name="roleIds" value={role.id} className="h-4 w-4" />
               {role.name}
             </label>

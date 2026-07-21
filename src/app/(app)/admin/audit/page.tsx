@@ -34,8 +34,8 @@ export default async function AuditLogPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Audit log</h1>
-        <p className="mt-1 text-sm text-slate-500">{total} recorded events.</p>
+        <h1 className="text-2xl font-bold text-ink">Audit log</h1>
+        <p className="mt-1 text-sm text-ink-faint">{total} recorded events.</p>
       </div>
 
       <Card>
@@ -56,28 +56,28 @@ export default async function AuditLogPage({
             <TBody>
               {logs.map((log) => (
                 <TR key={log.id}>
-                  <TD className="whitespace-nowrap text-slate-500">
+                  <TD className="whitespace-nowrap text-ink-faint">
                     {log.createdAt.toISOString().replace("T", " ").slice(0, 19)}
                   </TD>
                   <TD>
                     {log.actor ? (
                       <span title={log.actor.email}>{log.actor.name}</span>
                     ) : (
-                      <span className="text-slate-400">system / anonymous</span>
+                      <span className="text-ink-faint">system / anonymous</span>
                     )}
                   </TD>
                   <TD>
                     <Badge tone="gray">{log.action}</Badge>
                   </TD>
-                  <TD className="text-slate-500">
+                  <TD className="text-ink-faint">
                     {log.targetType ? `${log.targetType}:${log.targetId ?? "?"}` : "—"}
                   </TD>
-                  <TD className="text-slate-500">{log.ip ?? "—"}</TD>
+                  <TD className="text-ink-faint">{log.ip ?? "—"}</TD>
                 </TR>
               ))}
               {logs.length === 0 && (
                 <TR>
-                  <TD colSpan={5} className="py-8 text-center text-slate-400">
+                  <TD colSpan={5} className="py-8 text-center text-ink-faint">
                     No events recorded yet.
                   </TD>
                 </TR>
@@ -87,7 +87,7 @@ export default async function AuditLogPage({
         </CardBody>
       </Card>
 
-      <div className="flex items-center justify-between text-sm text-slate-500">
+      <div className="flex items-center justify-between text-sm text-ink-faint">
         <span>
           Page {page} of {totalPages}
         </span>
@@ -95,7 +95,7 @@ export default async function AuditLogPage({
           {page > 1 && (
             <Link
               href={`/admin/audit?page=${page - 1}`}
-              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-md border border-line bg-surface px-3 py-1.5 font-medium text-ink-muted hover:bg-surface-2"
             >
               Previous
             </Link>
@@ -103,7 +103,7 @@ export default async function AuditLogPage({
           {page < totalPages && (
             <Link
               href={`/admin/audit?page=${page + 1}`}
-              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-md border border-line bg-surface px-3 py-1.5 font-medium text-ink-muted hover:bg-surface-2"
             >
               Next
             </Link>

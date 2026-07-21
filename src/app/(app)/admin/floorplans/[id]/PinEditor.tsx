@@ -81,12 +81,12 @@ export function PinEditor({ plan, rooms }: Props) {
     <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
       {/* Map */}
       <div>
-        <p className="mb-2 text-sm text-slate-500">
+        <p className="mb-2 text-sm text-ink-faint">
           {moveMode
             ? "Click the map to move the selected pin."
             : "Click an empty spot to add a room, or click a pin to edit it."}
         </p>
-        <div className="overflow-auto rounded-lg border border-slate-200 bg-slate-50">
+        <div className="overflow-auto rounded-lg border border-line bg-surface-2">
           <div
             className="relative w-full cursor-crosshair select-none"
             onClick={onMapClick}
@@ -116,7 +116,7 @@ export function PinEditor({ plan, rooms }: Props) {
                     selectedId === room.id ? "text-brand-700" : "text-red-600"
                   }`}
                 >
-                  <span className="max-w-[8rem] truncate rounded bg-white/90 px-1 text-[10px] font-semibold shadow">
+                  <span className="max-w-[8rem] truncate rounded bg-surface/90 px-1 text-[10px] font-semibold shadow">
                     {room.number}
                   </span>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -147,8 +147,8 @@ export function PinEditor({ plan, rooms }: Props) {
 
         {/* New room */}
         {pending && (
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <h3 className="mb-3 font-semibold text-slate-900">New room</h3>
+          <div className="rounded-lg border border-line bg-surface p-4">
+            <h3 className="mb-3 font-semibold text-ink">New room</h3>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -187,9 +187,9 @@ export function PinEditor({ plan, rooms }: Props) {
 
         {/* Edit room */}
         {selected && (
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <div className="rounded-lg border border-line bg-surface p-4">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="font-semibold text-slate-900">Edit {selected.number}</h3>
+              <h3 className="font-semibold text-ink">Edit {selected.number}</h3>
               <Badge tone="blue">selected</Badge>
             </div>
             <form
@@ -246,14 +246,14 @@ export function PinEditor({ plan, rooms }: Props) {
             </form>
 
             {/* Devices */}
-            <div className="mt-4 border-t border-slate-100 pt-4">
-              <h4 className="mb-2 text-sm font-semibold text-slate-700">PCs in this room</h4>
+            <div className="mt-4 border-t border-line pt-4">
+              <h4 className="mb-2 text-sm font-semibold text-ink-muted">PCs in this room</h4>
               <ul className="mb-3 space-y-1">
                 {selected.devices.map((d) => (
                   <li key={d.id} className="flex items-center justify-between text-sm">
                     <span>
                       {d.name}
-                      {d.assetTag && <span className="text-slate-400"> · {d.assetTag}</span>}
+                      {d.assetTag && <span className="text-ink-faint"> · {d.assetTag}</span>}
                     </span>
                     <button
                       type="button"
@@ -272,7 +272,7 @@ export function PinEditor({ plan, rooms }: Props) {
                   </li>
                 ))}
                 {selected.devices.length === 0 && (
-                  <li className="text-sm text-slate-400">No PCs linked yet.</li>
+                  <li className="text-sm text-ink-faint">No PCs linked yet.</li>
                 )}
               </ul>
               <form
@@ -302,7 +302,7 @@ export function PinEditor({ plan, rooms }: Props) {
         )}
 
         {!pending && !selected && (
-          <div className="rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-500">
+          <div className="rounded-lg border border-dashed border-line p-4 text-sm text-ink-faint">
             Select a pin to edit it, or click an empty spot on the map to add a room.
           </div>
         )}

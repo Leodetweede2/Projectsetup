@@ -51,7 +51,7 @@ export default async function AdminUsersPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">Users</h1>
+      <h1 className="text-2xl font-bold text-ink">Users</h1>
 
       {canWrite && (
         <Card>
@@ -72,7 +72,7 @@ export default async function AdminUsersPage({
               name="q"
               defaultValue={query}
               placeholder="Search name or email…"
-              className="h-9 w-56 rounded-md border border-slate-300 px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+              className="h-9 w-56 rounded-md border border-line px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
             />
             <Button type="submit" variant="secondary" size="sm">
               Search
@@ -93,7 +93,7 @@ export default async function AdminUsersPage({
             <TBody>
               {users.map((u) => (
                 <TR key={u.id}>
-                  <TD className="font-medium text-slate-900">{u.name}</TD>
+                  <TD className="font-medium text-ink">{u.name}</TD>
                   <TD>
                     {u.email}
                     {!u.emailVerified && (
@@ -109,7 +109,7 @@ export default async function AdminUsersPage({
                           </Badge>
                         ))
                       ) : (
-                        <span className="text-slate-400">—</span>
+                        <span className="text-ink-faint">—</span>
                       )}
                     </div>
                   </TD>
@@ -154,7 +154,7 @@ export default async function AdminUsersPage({
               ))}
               {users.length === 0 && (
                 <TR>
-                  <TD colSpan={canWrite ? 5 : 4} className="py-8 text-center text-slate-400">
+                  <TD colSpan={canWrite ? 5 : 4} className="py-8 text-center text-ink-faint">
                     No users found.
                   </TD>
                 </TR>

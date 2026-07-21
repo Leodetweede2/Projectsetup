@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth/guards";
 import { hasAnyPermission } from "@/lib/rbac/hasPermission";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { AppNav, type NavGroup, type NavItem } from "@/components/AppNav";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
@@ -34,21 +35,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ];
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="flex h-14 w-full items-center justify-between px-6 lg:px-8">
+    <div className="min-h-screen bg-canvas">
+      <header className="sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur">
+        <div className="mx-auto flex h-14 w-full max-w-[1680px] items-center justify-between px-6 lg:px-8">
           <div className="flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-brand-600 text-sm font-bold text-white">
               A
             </div>
-            <span className="font-semibold text-slate-900">App Template</span>
+            <span className="font-semibold text-ink">App Template</span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-slate-600 sm:inline">{user.name}</span>
+            <span className="hidden text-sm text-ink-muted sm:inline">{user.name}</span>
+            <ThemeToggle />
             <form action="/api/auth/logout" method="post">
               <button
                 type="submit"
-                className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                className="rounded-md px-3 py-1.5 text-sm font-medium text-ink-muted hover:bg-surface-2 hover:text-ink"
               >
                 Sign out
               </button>
@@ -57,9 +59,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </header>
 
-      <div className="flex w-full gap-8 px-6 py-6 lg:px-8">
-        <aside className="w-56 shrink-0">
-          <AppNav groups={nav} />
+      <div className="mx-auto flex w-full max-w-[1680px] gap-8 px-6 py-6 lg:px-8">
+        <aside className="hidden w-56 shrink-0 md:block">
+          <div className="sticky top-20">
+            <AppNav groups={nav} />
+          </div>
         </aside>
         <main className="min-w-0 flex-1">{children}</main>
       </div>

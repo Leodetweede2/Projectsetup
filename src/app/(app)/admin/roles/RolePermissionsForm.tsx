@@ -35,7 +35,7 @@ export function RolePermissionsForm({ role, permissions, granted, canWrite }: Pr
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {groups.map((group) => (
           <div key={group}>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-faint">
               {group}
             </p>
             <div className="space-y-2">
@@ -44,7 +44,7 @@ export function RolePermissionsForm({ role, permissions, granted, canWrite }: Pr
                 .map((p) => (
                   <label
                     key={p.key}
-                    className="flex items-start gap-2 text-sm text-slate-700"
+                    className="flex items-start gap-2 text-sm text-ink-muted"
                     title={p.description}
                   >
                     <input

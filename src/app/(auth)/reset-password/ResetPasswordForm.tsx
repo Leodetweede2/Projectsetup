@@ -38,7 +38,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
             </SubmitButton>
           </form>
         )}
-        <p className="text-center text-sm text-slate-500">
+        <p className="text-center text-sm text-ink-faint">
           <Link href="/login" className="font-medium text-brand-600 hover:underline">
             Back to sign in
           </Link>

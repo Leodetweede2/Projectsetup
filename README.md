@@ -20,6 +20,9 @@ secure baseline instead of from scratch.
 - **Profile & settings** — users edit their own profile and change their password.
 - **Audit log** — security-relevant events (logins, role changes, user edits) are
   recorded and viewable by admins.
+- **Light / dark mode** — a theme switch in the header (and on the sign-in
+  screen); the choice is remembered and applied before first paint (no flash).
+  Colours are driven by semantic tokens, so the whole UI flips from one place.
 
 ## Tech stack
 

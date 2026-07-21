@@ -13,9 +13,9 @@ export default async function AssetListPage() {
   if (!imp) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold text-slate-900">Asset list</h1>
+        <h1 className="text-2xl font-bold text-ink">Asset list</h1>
         <Card>
-          <CardBody className="text-slate-500">
+          <CardBody className="text-ink-faint">
             No asset list has been imported yet. An administrator can import one under
             Admin → Import list.
           </CardBody>
@@ -27,8 +27,8 @@ export default async function AssetListPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Asset list</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-2xl font-bold text-ink">Asset list</h1>
+        <p className="mt-1 text-sm text-ink-faint">
           From <span className="font-medium">{imp.filename}</span> · {imp.rowCount} rows.
           Search, filter per column, and sort by clicking a header; rows link to their
           location on the floor plan.

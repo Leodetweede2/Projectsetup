@@ -23,8 +23,8 @@ export default async function AdminRolesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Roles &amp; permissions</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-2xl font-bold text-ink">Roles &amp; permissions</h1>
+        <p className="mt-1 text-sm text-ink-faint">
           {canWrite
             ? "Toggle the permissions granted by each role."
             : "You have read-only access to roles."}
@@ -37,7 +37,7 @@ export default async function AdminRolesPage() {
             <CardTitle>{role.name}</CardTitle>
             {role.isSystem && <Badge tone="gray">system</Badge>}
             {role.description && (
-              <span className="text-sm text-slate-500">— {role.description}</span>
+              <span className="text-sm text-ink-faint">— {role.description}</span>
             )}
           </CardHeader>
           <CardBody>

@@ -26,7 +26,7 @@ export default async function FloorPlansPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">Floor plans</h1>
+      <h1 className="text-2xl font-bold text-ink">Floor plans</h1>
 
       <Card>
         <CardHeader>
@@ -54,8 +54,8 @@ export default async function FloorPlansPage() {
             <TBody>
               {plans.map((plan) => (
                 <TR key={plan.id}>
-                  <TD className="font-medium text-slate-900">{plan.name}</TD>
-                  <TD className="text-slate-600">{planLabel(plan)}</TD>
+                  <TD className="font-medium text-ink">{plan.name}</TD>
+                  <TD className="text-ink-muted">{planLabel(plan)}</TD>
                   <TD>
                     <Badge tone="gray">{plan._count.rooms}</Badge>
                   </TD>
@@ -78,7 +78,7 @@ export default async function FloorPlansPage() {
               ))}
               {plans.length === 0 && (
                 <TR>
-                  <TD colSpan={4} className="py-8 text-center text-slate-400">
+                  <TD colSpan={4} className="py-8 text-center text-ink-faint">
                     No floor plans yet. Upload one above.
                   </TD>
                 </TR>

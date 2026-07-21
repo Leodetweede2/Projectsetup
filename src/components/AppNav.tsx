@@ -24,7 +24,7 @@ export function AppNav({ groups }: { groups: NavGroup[] }) {
         .map((group, i) => (
           <div key={group.label ?? i} className="space-y-1">
             {group.label && (
-              <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-ink-faint">
                 {group.label}
               </p>
             )}
@@ -37,8 +37,8 @@ export function AppNav({ groups }: { groups: NavGroup[] }) {
                   className={cn(
                     "block rounded-md px-3 py-2 text-sm font-medium transition-colors",
                     active
-                      ? "bg-brand-50 text-brand-700"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                      ? "bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300"
+                      : "text-ink-muted hover:bg-surface-2 hover:text-ink",
                   )}
                 >
                   {item.label}

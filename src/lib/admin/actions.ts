@@ -136,6 +136,35 @@ export async function setUserActiveAction(formData: FormData): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Delete user
+// ---------------------------------------------------------------------------
+export async function deleteUserAction(formData: FormData): Promise<void> {
+  const actor = await requirePermission(PERMISSIONS.USERS_DELETE);
+  const userId = String(formData.get("userId"));
+
+  // Never let an admin delete their own account.
+  if (userId === actor.id) return;
+
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  });
+  if (!target) return;
+
+  // Sessions cascade-delete with the user (see schema onDelete: Cascade).
+  await prisma.user.delete({ where: { id: userId } });
+
+  await logAudit({
+    action: AUDIT_ACTIONS.USER_DELETED,
+    actorUserId: actor.id,
+    targetType: "user",
+    targetId: userId,
+    metadata: { email: target.email },
+  });
+  revalidatePath("/admin/users");
+}
+
+// ---------------------------------------------------------------------------
 // Update role permissions
 // ---------------------------------------------------------------------------
 export async function updateRolePermissionsAction(

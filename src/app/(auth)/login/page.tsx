@@ -44,10 +44,7 @@ export default function LoginPage() {
           </SubmitButton>
         </form>
         <p className="text-center text-sm text-ink-faint">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="font-medium text-brand-600 hover:underline">
-            Create one
-          </Link>
+          Accounts are created by an administrator. Contact one if you need access.
         </p>
       </CardBody>
     </Card>

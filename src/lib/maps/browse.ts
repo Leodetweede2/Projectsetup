@@ -150,3 +150,56 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     devices,
   };
 }
+
+export interface DepartmentStat {
+  name: string;
+  total: number;
+  /** PCs in this department whose room is placed on a floor plan. */
+  located: number;
+}
+
+export interface DepartmentStats {
+  /** The asset-list column used as the department, or null if none detected. */
+  column: string | null;
+  /** Number of distinct departments. */
+  count: number;
+  /** Departments ordered by PC count (descending). */
+  top: DepartmentStat[];
+}
+
+/** Header of the column that holds the department (Afdeling / Department). */
+const DEPARTMENT_COLUMN = /afdeling|afdeeling|department|dept|\bafd\b/i;
+
+/**
+ * Per-department PC counts from the latest asset import: how many PCs each
+ * department has and how many of those are located on a floor plan.
+ */
+export async function getDepartmentStats(topN = 8): Promise<DepartmentStats> {
+  const imp = await getLatestImport();
+  if (!imp) return { column: null, count: 0, top: [] };
+
+  const column = imp.columns.find((c) => DEPARTMENT_COLUMN.test(c)) ?? null;
+  if (!column) return { column: null, count: 0, top: [] };
+
+  const [records, roomRows] = await Promise.all([
+    prisma.assetRecord.findMany({
+      where: { importId: imp.id },
+      select: { roomNumber: true, data: true },
+    }),
+    prisma.room.findMany({ select: { number: true } }),
+  ]);
+  const roomNorms = new Set(roomRows.map((r) => normalizeRoomNumber(r.number)));
+
+  const map = new Map<string, DepartmentStat>();
+  for (const r of records) {
+    const data = r.data as Record<string, string>;
+    const name = (data[column] ?? "").trim() || "— (unknown)";
+    const entry = map.get(name) ?? { name, total: 0, located: 0 };
+    entry.total += 1;
+    if (roomNorms.has(r.roomNumber)) entry.located += 1;
+    map.set(name, entry);
+  }
+
+  const top = [...map.values()].sort((a, b) => b.total - a.total).slice(0, topN);
+  return { column, count: map.size, top };
+}

@@ -10,7 +10,7 @@ import { SESSION_COOKIE } from "@/lib/auth/constants";
  * src/lib/auth/guards.ts.
  */
 const PROTECTED_PREFIXES = ["/dashboard", "/profile", "/settings", "/account", "/admin", "/find", "/list", "/map"];
-const AUTH_PAGES = ["/login", "/register"];
+const AUTH_PAGES = ["/login"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

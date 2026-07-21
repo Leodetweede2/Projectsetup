@@ -286,7 +286,10 @@ export function ImportAssetList() {
               <THead>
                 <TR>
                   {columns.map((c) => (
-                    <TH key={c} className={c === roomCol ? "text-brand-700" : undefined}>
+                    <TH
+                      key={c}
+                      className={c === roomCol ? "text-brand-700 dark:text-brand-300" : undefined}
+                    >
                       {c}
                       {c === roomCol ? " (room #)" : ""}
                     </TH>

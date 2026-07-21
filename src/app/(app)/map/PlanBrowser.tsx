@@ -207,7 +207,8 @@ export function PlanBrowser({
           limitToBounds
           centerZoomedOut={false}
           doubleClick={{ disabled: true }}
-          wheel={{ step: 0.2 }}
+          // Gentle wheel zoom so one scroll notch doesn't jump too far in.
+          wheel={{ step: 0.06 }}
           disablePadding
           // Stop the pan from "snapping back" after a drag: disable the
           // momentum fling that carries (and re-aligns) the content.

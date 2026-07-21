@@ -10,6 +10,7 @@ import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CreateUserForm } from "./CreateUserForm";
+import { DeleteUserButton } from "./DeleteUserButton";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,8 @@ export default async function AdminUsersPage({
   await requireAnyPermission([PERMISSIONS.USERS_READ, PERMISSIONS.USERS_WRITE]);
   const me = await getCurrentUser();
   const canWrite = hasPermission(me, PERMISSIONS.USERS_WRITE);
+  const canDelete = hasPermission(me, PERMISSIONS.USERS_DELETE);
+  const canManage = canWrite || canDelete;
 
   const { q } = await searchParams;
   const query = q?.trim();
@@ -87,7 +90,7 @@ export default async function AdminUsersPage({
                 <TH>Email</TH>
                 <TH>Roles</TH>
                 <TH>Status</TH>
-                {canWrite && <TH className="text-right">Actions</TH>}
+                {canManage && <TH className="text-right">Actions</TH>}
               </TR>
             </THead>
             <TBody>
@@ -120,33 +123,46 @@ export default async function AdminUsersPage({
                       <Badge tone="red">Inactive</Badge>
                     )}
                   </TD>
-                  {canWrite && (
+                  {canManage && (
                     <TD>
                       <div className="flex items-center justify-end gap-2">
-                        <Link href={`/admin/users/${u.id}`}>
-                          <Button variant="secondary" size="sm">
-                            Edit
-                          </Button>
-                        </Link>
-                        <form action={setUserActiveAction}>
-                          <input type="hidden" name="userId" value={u.id} />
-                          <input
-                            type="hidden"
-                            name="active"
-                            value={(!u.isActive).toString()}
-                          />
-                          <Button
-                            type="submit"
-                            variant={u.isActive ? "danger" : "primary"}
-                            size="sm"
+                        {canWrite && (
+                          <>
+                            <Link href={`/admin/users/${u.id}`}>
+                              <Button variant="secondary" size="sm">
+                                Edit
+                              </Button>
+                            </Link>
+                            <form action={setUserActiveAction}>
+                              <input type="hidden" name="userId" value={u.id} />
+                              <input
+                                type="hidden"
+                                name="active"
+                                value={(!u.isActive).toString()}
+                              />
+                              <Button
+                                type="submit"
+                                variant={u.isActive ? "danger" : "primary"}
+                                size="sm"
+                                disabled={u.id === me?.id}
+                                title={
+                                  u.id === me?.id
+                                    ? "You cannot change your own status"
+                                    : undefined
+                                }
+                              >
+                                {u.isActive ? "Deactivate" : "Activate"}
+                              </Button>
+                            </form>
+                          </>
+                        )}
+                        {canDelete && (
+                          <DeleteUserButton
+                            userId={u.id}
+                            email={u.email}
                             disabled={u.id === me?.id}
-                            title={
-                              u.id === me?.id ? "You cannot change your own status" : undefined
-                            }
-                          >
-                            {u.isActive ? "Deactivate" : "Activate"}
-                          </Button>
-                        </form>
+                          />
+                        )}
                       </div>
                     </TD>
                   )}

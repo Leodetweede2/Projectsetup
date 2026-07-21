@@ -37,7 +37,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-canvas">
       <header className="sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur">
-        <div className="mx-auto flex h-14 w-full max-w-[1680px] items-center justify-between px-6 lg:px-8">
+        <div className="flex h-14 w-full items-center justify-between px-6 lg:px-8">
           <div className="flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-brand-600 text-sm font-bold text-white">
               A
@@ -59,7 +59,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </header>
 
-      <div className="mx-auto flex w-full max-w-[1680px] gap-8 px-6 py-6 lg:px-8">
+      <div className="flex w-full gap-8 px-6 py-6 lg:px-8">
         <aside className="hidden w-56 shrink-0 md:block">
           <div className="sticky top-20">
             <AppNav groups={nav} />

@@ -5,12 +5,7 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
 import { sendMailBestEffort } from "@/lib/mail";
 import { AUDIT_ACTIONS, logAudit } from "@/lib/audit";
-import {
-  forgotPasswordSchema,
-  loginSchema,
-  registerSchema,
-  resetPasswordSchema,
-} from "@/lib/validation";
+import { forgotPasswordSchema, loginSchema, resetPasswordSchema } from "@/lib/validation";
 import { hashPassword, verifyPassword } from "./password";
 import { createSession, destroyOtherSessions } from "./session";
 import { generateToken, hashToken } from "./tokens";
@@ -70,44 +65,13 @@ async function issueVerificationToken(email: string, type: "EMAIL_VERIFY" | "PAS
 // ---------------------------------------------------------------------------
 export async function registerAction(
   _prev: ActionState,
-  formData: FormData,
+  _formData: FormData,
 ): Promise<ActionState> {
-  const parsed = registerSchema.safeParse({
-    name: formData.get("name"),
-    email: formData.get("email"),
-    password: formData.get("password"),
-  });
-  if (!parsed.success) return { fieldErrors: fieldErrorsFrom(parsed.error) };
-
-  const { name, email, password } = parsed.data;
-
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    return { fieldErrors: { email: "An account with this email already exists." } };
-  }
-
-  const userRole = await prisma.role.findUnique({ where: { name: "USER" } });
-  const user = await prisma.user.create({
-    data: {
-      name,
-      email,
-      passwordHash: await hashPassword(password),
-      roles: userRole ? { connect: { id: userRole.id } } : undefined,
-    },
-  });
-
-  const token = await issueVerificationToken(email, "EMAIL_VERIFY");
-  const link = `${await appUrl()}/verify-email?token=${token}`;
-  await sendMailBestEffort({
-    to: email,
-    subject: "Verify your email",
-    text: `Welcome! Confirm your email address by opening this link:\n\n${link}\n\nThis link expires in 24 hours.`,
-  });
-
-  await logAudit({ action: AUDIT_ACTIONS.REGISTER, actorUserId: user.id, targetId: user.id });
-
+  // Public self-registration is disabled: only an administrator can create
+  // accounts (Admin → Users). This action stays as a safe no-op so a direct
+  // POST cannot create an account.
   return {
-    success: "Account created. Check your email for a verification link to finish signing up.",
+    error: "Registration is disabled. Ask an administrator to create your account.",
   };
 }
 

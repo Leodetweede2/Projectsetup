@@ -38,21 +38,13 @@ test("invalid credentials are rejected", async ({ page }) => {
   await expect(page.getByText("Invalid email or password.")).toBeVisible();
 });
 
-test("a newly registered user must verify their email before signing in", async ({ page }) => {
-  const email = `e2e-${Date.now()}@example.com`;
-
-  await page.goto("/register");
-  await page.getByLabel("Full name").fill("E2E Test User");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill("password123");
-  await page.getByRole("button", { name: "Create account" }).click();
-
-  await expect(page.getByText(/Check your email/)).toBeVisible();
-
-  // Unverified users cannot sign in yet.
+test("public self-registration is disabled", async ({ page }) => {
+  // The sign-in page no longer offers a way to create an account.
   await page.goto("/login");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill("password123");
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByText(/verify your email/i)).toBeVisible();
+  await expect(page.getByRole("link", { name: /Create one/ })).toHaveCount(0);
+  await expect(page.getByText(/created by an administrator/i)).toBeVisible();
+
+  // Visiting /register directly redirects to the sign-in page.
+  await page.goto("/register");
+  await expect(page).toHaveURL(/\/login/);
 });

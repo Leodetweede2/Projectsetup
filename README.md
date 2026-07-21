@@ -9,13 +9,15 @@ secure baseline instead of from scratch.
 
 - **Authentication** — email + password, hashed with bcrypt, database-backed
   sessions (opaque token in an httpOnly cookie; no JWT, revocable).
-- **Registration + email verification** — new users verify via an emailed link
-  before they can sign in.
+- **Admin-only account creation** — public self-registration is disabled; an
+  administrator creates accounts under Admin → Users (pre-verified). Email
+  verification is still supported for accounts that need it.
 - **Password reset** — time-limited, single-use reset links.
 - **RBAC** — roles carry a set of permission keys; a central permission catalog
   and server-side guards protect every route and action.
 - **Admin user management** — list/search, create, edit, assign roles,
-  activate/deactivate.
+  activate/deactivate, and delete accounts (delete needs `users:delete`, granted
+  to ADMIN).
 - **Roles & permissions UI** — toggle the permissions granted by each role.
 - **Profile & settings** — users edit their own profile and change their password.
 - **Audit log** — security-relevant events (logins, role changes, user edits) are

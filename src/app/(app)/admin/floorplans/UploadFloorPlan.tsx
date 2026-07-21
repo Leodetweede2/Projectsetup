@@ -210,12 +210,22 @@ export function UploadFloorPlan({ knownRoomNumbers = [] }: { knownRoomNumbers?: 
             <FieldError>{!name.trim() ? "Name is required" : undefined}</FieldError>
           </div>
           <div>
-            <Label htmlFor="fp-building">Building</Label>
-            <Input id="fp-building" value={building} onChange={(e) => setBuilding(e.target.value)} />
+            <Label htmlFor="fp-building">Location</Label>
+            <Input
+              id="fp-building"
+              value={building}
+              onChange={(e) => setBuilding(e.target.value)}
+              placeholder="e.g. Molengracht"
+            />
           </div>
           <div>
             <Label htmlFor="fp-floor">Floor</Label>
-            <Input id="fp-floor" value={floor} onChange={(e) => setFloor(e.target.value)} />
+            <Input
+              id="fp-floor"
+              value={floor}
+              onChange={(e) => setFloor(e.target.value)}
+              placeholder="e.g. 1"
+            />
           </div>
         </div>
       )}

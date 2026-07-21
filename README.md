@@ -328,20 +328,26 @@ the seed) can search and view. Managing plans/pins needs `maps:write` (ADMIN).
 **How to use it**
 
 1. **Add a floor plan** — as an admin, go to **Floor plans → Upload a floor plan
-   (PDF)**. The PDF is rendered to an image in your browser (pick the page for
-   multi-page PDFs), then saved. If the PDF has a **text layer with room codes**
-   (e.g. `NC_04_680`), the pins are **detected and placed automatically** — you'll
-   see "N detected room pins" with a toggle before saving (and an advanced field to
-   tweak the room-code pattern). PDFs without a text layer detect 0; you pin manually.
+   (PDF)**. Give it a **Location** (e.g. a hospital site like `Molengracht`) and a
+   **Floor** — these drive the location/floor navigation on the map. The PDF is
+   rendered to an image in your browser (pick the page for multi-page PDFs), then
+   saved. If the PDF has a **text layer with room codes**, the pins are **detected and
+   placed automatically** — you'll see "N detected room pins" with a toggle before
+   saving (and an advanced field to tweak the room-code pattern). Detection matches two
+   ways: the built-in code pattern (e.g. `NC_04_680`) **and** any room number present
+   in the **imported asset list**, so plans that use a different numbering scheme are
+   still recognised. PDFs without a text layer detect 0; you pin manually.
 2. **Place / adjust room pins** — open the plan's **Edit pins** screen. Auto-placed
    pins are already there; click an empty spot to add a room, or click a pin to edit
    it, move it, delete it, or link PCs (hostname / asset tag) to it. Rooms are linked
    to the asset list by room number, ignoring case and `_`/`-`/`.` differences.
 3. **Find a PC / browse the map** — open **Map**. Search a room number, name,
    department, or PC name/asset tag to jump straight to the room, or browse: every
-   room is a pin (red = has PCs, grey = none). Switch between floor plans, and click a
-   pin to see the room and **exactly which PCs are in it** (from the asset list) in the
-   side panel. Pan/zoom for large plans.
+   room is a pin (red = has PCs, grey = none). A **location → floor navigation** lets
+   you first pick a location (site) and then a floor, so many plans across multiple
+   locations stay easy to switch between. Click a pin to see the room and **exactly
+   which PCs are in it** (from the asset list) in the side panel. Pan/zoom for large
+   plans.
 
 The **Dashboard** shows key stats (how many PCs have a location, PCs without a
 location, rooms with PCs, floor plans, etc.).

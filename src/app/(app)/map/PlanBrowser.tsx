@@ -41,9 +41,16 @@ interface Props {
 
 const pcCount = (r: BrowseRoom) => r.devices.length + r.assets.length;
 
-function planOptionLabel(p: PlanOption) {
-  const loc = [p.building && `Bldg ${p.building}`, p.floor && `Fl ${p.floor}`].filter(Boolean).join(" · ");
-  return loc ? `${p.name} — ${loc}` : p.name;
+const LOCATION_FALLBACK = "Other";
+
+/** The location a plan belongs to (the building field, grouped). */
+function planLocation(p: PlanOption): string {
+  return p.building?.trim() || LOCATION_FALLBACK;
+}
+
+/** Label for a floor button within a location. */
+function floorLabel(p: PlanOption): string {
+  return p.floor?.trim() ? p.floor.trim() : p.name;
 }
 
 export function PlanBrowser({
@@ -87,21 +94,34 @@ export function PlanBrowser({
     [assetColumns, assetRoomColumn],
   );
 
+  // Group the plans by location (building) → floors, for the navigation menu.
+  const locations = useMemo(() => {
+    const map = new Map<string, PlanOption[]>();
+    for (const p of plans) {
+      const loc = planLocation(p);
+      const list = map.get(loc) ?? [];
+      list.push(p);
+      map.set(loc, list);
+    }
+    return [...map.entries()].map(([name, items]) => ({ name, items }));
+  }, [plans]);
+
+  const currentPlan = plans.find((p) => p.id === planId) ?? null;
+  const currentLocation = currentPlan ? planLocation(currentPlan) : locations[0]?.name;
+  const floorsHere = locations.find((l) => l.name === currentLocation)?.items ?? [];
+
+  function goToPlan(id: string) {
+    router.push(`/map?plan=${id}`);
+  }
+  function goToLocation(name: string) {
+    const first = locations.find((l) => l.name === name)?.items[0];
+    if (first) goToPlan(first.id);
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={planId}
-            onChange={(e) => router.push(`/map?plan=${e.target.value}`)}
-            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
-          >
-            {plans.map((p) => (
-              <option key={p.id} value={p.id}>
-                {planOptionLabel(p)}
-              </option>
-            ))}
-          </select>
           <form method="get" action="/map" className="flex items-center gap-2">
             <input
               name="q"
@@ -122,6 +142,60 @@ export function PlanBrowser({
             />
             Only rooms with PCs
           </label>
+        </div>
+
+        {/* Location → floor navigation. */}
+        <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3">
+          {locations.length > 1 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Location
+              </span>
+              {locations.map((loc) => {
+                const active = loc.name === currentLocation;
+                return (
+                  <button
+                    key={loc.name}
+                    type="button"
+                    onClick={() => goToLocation(loc.name)}
+                    aria-pressed={active}
+                    className={[
+                      "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                      active
+                        ? "bg-brand-600 text-white"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+                    ].join(" ")}
+                  >
+                    {loc.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Floor
+            </span>
+            {floorsHere.map((p) => {
+              const active = p.id === planId;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => goToPlan(p.id)}
+                  aria-pressed={active}
+                  className={[
+                    "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
+                    active
+                      ? "border-brand-500 bg-brand-50 text-brand-700"
+                      : "border-slate-200 text-slate-600 hover:bg-slate-100",
+                  ].join(" ")}
+                >
+                  {floorLabel(p)}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <TransformWrapper

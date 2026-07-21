@@ -47,6 +47,30 @@ export async function searchAssetRecords(query: string, take = 300) {
   return { import: imp, columns: imp.columns, rows, total };
 }
 
+/** All rows of the latest import, with room links — for the interactive table. */
+export async function getAllAssetRows(cap = 10000) {
+  const imp = await getLatestImport();
+  if (!imp) return { import: null, columns: [] as string[], rows: [] as AssetRow[] };
+
+  const [records, linkMap] = await Promise.all([
+    prisma.assetRecord.findMany({
+      where: { importId: imp.id },
+      take: cap,
+      orderBy: { roomNumber: "asc" },
+      select: { id: true, roomNumber: true, data: true },
+    }),
+    getRoomLinkMap(),
+  ]);
+
+  const rows: AssetRow[] = records.map((r) => ({
+    id: r.id,
+    roomNumber: r.roomNumber,
+    data: r.data as Record<string, string>,
+    roomId: linkMap.get(r.roomNumber) ?? null,
+  }));
+  return { import: imp, columns: imp.columns, rows };
+}
+
 /** Excel rows whose room number matches a given room, for the map viewer. */
 export async function getRecordsForRoom(roomNumber: string) {
   const imp = await getLatestImport();

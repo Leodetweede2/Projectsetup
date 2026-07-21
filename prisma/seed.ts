@@ -85,7 +85,7 @@ async function main() {
 }
 
 async function seedDemoAssetList() {
-  const norm = (s: string) => s.toUpperCase().replace(/\s+/g, "").trim();
+  const norm = (s: string) => s.toUpperCase().replace(/[\s._-]/g, "");
   const columns = ["Ruimtenummer", "PC-naam", "Gebruiker", "Type"];
   const rows = [
     { Ruimtenummer: "H1.001", "PC-naam": "AMP-PC-0421", Gebruiker: "Balie 1", Type: "Desktop" },

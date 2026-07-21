@@ -16,12 +16,14 @@ describe("clamp01", () => {
 });
 
 describe("planLabel", () => {
-  it("combines building and floor", () => {
-    expect(planLabel({ name: "Plan", building: "H", floor: "1" })).toBe("Building H · Floor 1");
+  it("combines location and floor", () => {
+    expect(planLabel({ name: "Plan", building: "Molengracht", floor: "1" })).toBe(
+      "Molengracht · Floor 1",
+    );
   });
 
   it("uses whichever part is present", () => {
-    expect(planLabel({ name: "Plan", building: "H", floor: null })).toBe("Building H");
+    expect(planLabel({ name: "Plan", building: "Molengracht", floor: null })).toBe("Molengracht");
     expect(planLabel({ name: "Plan", building: null, floor: "2" })).toBe("Floor 2");
   });
 

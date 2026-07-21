@@ -53,6 +53,22 @@ describe("extractRoomPins", () => {
     expect(clamped.y).toBe(0);
   });
 
+  it("detects codes of any format when they are in the known-numbers set", () => {
+    // "R1.12" and "KELDER-A" don't match the default pattern, but are in the
+    // asset list, so asset-list-driven detection should still place them.
+    const known = new Set(["R112", "KELDERA"]);
+    const rooms = extractRoomPins(
+      [item("R1.12", 200, 100), item("KELDER-A", 800, 400), item("random text", 500, 250)],
+      IDENTITY,
+      W,
+      H,
+      DEFAULT_ROOM_PATTERN,
+      known,
+    );
+    const numbers = rooms.map((r) => r.number).sort();
+    expect(numbers).toEqual(["KELDER-A", "R1.12"]);
+  });
+
   it("default pattern matches the NC_04_680 style but not plain numbers", () => {
     expect(DEFAULT_ROOM_PATTERN.test("NC_04_680")).toBe(true);
     expect(DEFAULT_ROOM_PATTERN.test("NC_04-045_a")).toBe(true);

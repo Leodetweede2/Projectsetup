@@ -17,14 +17,17 @@ export function normalizeRoomNumber(value: unknown): string {
     .replace(/[\s._-]/g, "");
 }
 
-/** Human label for a plan, e.g. "Building H · Floor 1" (falls back to name). */
+/**
+ * Human label for a plan, e.g. "Molengracht · Floor 1" (falls back to name).
+ * The `building` field is used as the location (e.g. a hospital site).
+ */
 export function planLabel(plan: {
   name: string;
   building?: string | null;
   floor?: string | null;
 }): string {
   const parts = [
-    plan.building ? `Building ${plan.building}` : null,
+    plan.building ? plan.building : null,
     plan.floor ? `Floor ${plan.floor}` : null,
   ].filter(Boolean);
   return parts.length ? parts.join(" · ") : plan.name;

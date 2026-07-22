@@ -138,6 +138,13 @@ export function PlanBrowser({
   }, [rooms, onlyPcs, attr, attrVal, pinFilter, roomText]);
   const shownIds = useMemo(() => new Set(shownRooms.map((r) => r.id)), [shownRooms]);
 
+  // Only render pins that pass the filter (plus the selected one). Fewer DOM
+  // nodes inside the transformed layer = smoother pan/zoom on large plans.
+  const visiblePins = useMemo(
+    () => rooms.filter((r) => shownIds.has(r.id) || r.id === selectedId),
+    [rooms, shownIds, selectedId],
+  );
+
   // Filters that also narrow which PCs are shown inside a selected room.
   const pcFilterActive = attr !== "" || pinFilter.trim() !== "";
   const filtersActive = !onlyPcs || pcFilterActive;
@@ -395,6 +402,9 @@ export function PlanBrowser({
                   cursor: "grab",
                 }}
                 contentClass="!w-full"
+                // Keep the plan on its own GPU layer so pan/zoom scale the
+                // existing texture instead of re-rasterising the huge image.
+                contentStyle={{ willChange: "transform" }}
               >
                 <div className="relative w-full">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -406,8 +416,7 @@ export function PlanBrowser({
                     decoding="async"
                     onLoad={handleImageLoad}
                   />
-                  {rooms.map((room) => {
-                    const shown = shownIds.has(room.id);
+                  {visiblePins.map((room) => {
                     const hasPcs = pcCount(room) > 0;
                     const isSel = room.id === selectedId;
                     return (
@@ -424,8 +433,6 @@ export function PlanBrowser({
                         style={{
                           left: `${room.x * 100}%`,
                           top: `${room.y * 100}%`,
-                          opacity: shown ? 1 : 0.15,
-                          pointerEvents: shown ? "auto" : "none",
                           zIndex: isSel ? 20 : hasPcs ? 10 : 1,
                         }}
                       >

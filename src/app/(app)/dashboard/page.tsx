@@ -7,6 +7,8 @@ import {
   getDepartmentStats,
   getPivotStats,
   getLocationStats,
+  getOsStats,
+  getActivityStats,
 } from "@/lib/maps/browse";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
@@ -23,14 +25,16 @@ export default async function DashboardPage({
   const user = await requireUser();
   const canSeeMaps = hasPermission(user, PERMISSIONS.MAPS_READ);
   const { prow, pcol } = await searchParams;
-  const [stats, deptStats, pivot, locations] = canSeeMaps
+  const [stats, deptStats, pivot, locations, osStats, activity] = canSeeMaps
     ? await Promise.all([
         getDashboardStats(),
         getDepartmentStats(),
         getPivotStats(prow, pcol),
         getLocationStats(),
+        getOsStats(),
+        getActivityStats(),
       ])
-    : [null, null, null, null];
+    : [null, null, null, null, null, null];
 
   return (
     <div className="space-y-6">
@@ -76,6 +80,22 @@ export default async function DashboardPage({
             sub="Devices attached to a room by hand"
             tone="slate"
           />
+          {activity && (
+            <StatTile
+              label="Inactive PCs (90+ days)"
+              value={activity.stale}
+              sub={`Not seen in "${activity.column}"`}
+              tone={activity.stale > 0 ? "amber" : "green"}
+            />
+          )}
+          {osStats && (
+            <StatTile
+              label="Operating systems"
+              value={osStats.top.length}
+              sub={`Distinct values in "${osStats.column}"`}
+              tone="slate"
+            />
+          )}
         </div>
       )}
 
@@ -113,6 +133,87 @@ export default async function DashboardPage({
             </ul>
           </CardBody>
         </Card>
+      )}
+
+      {(osStats || activity) && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {osStats && osStats.top.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>By operating system</CardTitle>
+              </CardHeader>
+              <CardBody>
+                <ul className="space-y-3">
+                  {osStats.top.map((o) => {
+                    const pct = osStats.total ? Math.round((o.count / osStats.total) * 100) : 0;
+                    return (
+                      <li key={o.name} className="space-y-1">
+                        <div className="flex items-center justify-between gap-3 text-sm">
+                          <span className="truncate font-medium text-ink" title={o.name}>
+                            {o.name}
+                          </span>
+                          <span className="shrink-0 tabular-nums text-ink-faint">
+                            {o.count} · {pct}%
+                          </span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-surface-2">
+                          <div className="h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </CardBody>
+            </Card>
+          )}
+
+          {activity && (
+            <Card>
+              <CardHeader className="flex items-center justify-between gap-4">
+                <CardTitle>PC activity (last seen)</CardTitle>
+                <span className="text-xs text-ink-faint">from &quot;{activity.column}&quot;</span>
+              </CardHeader>
+              <CardBody className="space-y-3">
+                <div className="flex h-3 overflow-hidden rounded-full bg-surface-2">
+                  {(
+                    [
+                      ["bg-green-500", activity.active],
+                      ["bg-brand-400", activity.recent],
+                      ["bg-amber-500", activity.stale],
+                      ["bg-slate-400", activity.unknown],
+                    ] as const
+                  ).map(([cls, n], i) =>
+                    n > 0 ? (
+                      <div
+                        key={i}
+                        className={cls}
+                        style={{ width: `${(n / Math.max(1, activity.total)) * 100}%` }}
+                      />
+                    ) : null,
+                  )}
+                </div>
+                <ul className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                  {(
+                    [
+                      ["Active (≤30 days)", activity.active, "bg-green-500"],
+                      ["30–90 days", activity.recent, "bg-brand-400"],
+                      ["Inactive (90+ days)", activity.stale, "bg-amber-500"],
+                      ["Unknown / no date", activity.unknown, "bg-slate-400"],
+                    ] as const
+                  ).map(([label, n, cls]) => (
+                    <li key={label} className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2 text-ink-muted">
+                        <span className={`inline-block h-2.5 w-2.5 rounded-full ${cls}`} />
+                        {label}
+                      </span>
+                      <span className="tabular-nums font-medium text-ink">{n}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardBody>
+            </Card>
+          )}
+        </div>
       )}
 
       {pivot && (

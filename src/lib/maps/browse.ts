@@ -328,3 +328,89 @@ export async function getLocationStats(): Promise<LocationStat[]> {
     pcs: pcByPlan.get(p.id) ?? 0,
   }));
 }
+
+// ---------------------------------------------------------------------------
+// Operating-system breakdown (e.g. Windows 10 vs 11 migration progress)
+// ---------------------------------------------------------------------------
+
+export interface BreakdownStat {
+  name: string;
+  count: number;
+}
+export interface BreakdownStats {
+  column: string;
+  total: number;
+  top: BreakdownStat[];
+}
+
+const OS_COLUMN = /strosname|osname|\bos\b|besturing|operating/i;
+
+/** PCs grouped by operating system (or a similar column), for the dashboard. */
+export async function getOsStats(topN = 8): Promise<BreakdownStats | null> {
+  const imp = await getLatestImport();
+  if (!imp) return null;
+  const column = imp.columns.find((c) => OS_COLUMN.test(c));
+  if (!column) return null;
+
+  const recs = await prisma.assetRecord.findMany({
+    where: { importId: imp.id },
+    select: { data: true },
+  });
+  const map = new Map<string, number>();
+  for (const r of recs) {
+    const name = ((r.data as Record<string, string>)[column] ?? "").trim() || "— (unknown)";
+    map.set(name, (map.get(name) ?? 0) + 1);
+  }
+  const top = [...map.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, topN);
+  return { column, total: recs.length, top };
+}
+
+// ---------------------------------------------------------------------------
+// PC activity (how recently each PC last checked in)
+// ---------------------------------------------------------------------------
+
+export interface ActivityStats {
+  column: string;
+  active: number; // seen in the last 30 days
+  recent: number; // 30–90 days
+  stale: number; // more than 90 days
+  unknown: number; // no / unparseable date
+  total: number;
+}
+
+const LASTSEEN_COLUMN = /dtmlastcontact|last.?contact|laatste.?contact|last.?seen|laatst/i;
+
+/** Bucket PCs by how long ago they last checked in (from a date column). */
+export async function getActivityStats(): Promise<ActivityStats | null> {
+  const imp = await getLatestImport();
+  if (!imp) return null;
+  const column = imp.columns.find((c) => LASTSEEN_COLUMN.test(c));
+  if (!column) return null;
+
+  const recs = await prisma.assetRecord.findMany({
+    where: { importId: imp.id },
+    select: { data: true },
+  });
+  const now = Date.now();
+  const DAY = 86_400_000;
+  let active = 0;
+  let recent = 0;
+  let stale = 0;
+  let unknown = 0;
+  for (const r of recs) {
+    const v = ((r.data as Record<string, string>)[column] ?? "").trim();
+    const t = v ? Date.parse(v) : NaN;
+    if (Number.isNaN(t)) {
+      unknown += 1;
+      continue;
+    }
+    const days = (now - t) / DAY;
+    if (days <= 30) active += 1;
+    else if (days <= 90) recent += 1;
+    else stale += 1;
+  }
+  return { column, active, recent, stale, unknown, total: recs.length };
+}

@@ -86,14 +86,14 @@ async function main() {
 
 async function seedDemoAssetList() {
   const norm = (s: string) => s.toUpperCase().replace(/[\s._-]/g, "");
-  const columns = ["Ruimtenummer", "PC-naam", "Gebruiker", "Afdeling", "Type"];
+  const columns = ["Ruimtenummer", "PC-naam", "Gebruiker", "Afdeling", "Type", "OS", "Laatste contact"]; // prettier-ignore
   const rows = [
-    { Ruimtenummer: "H1.001", "PC-naam": "AMP-PC-0421", Gebruiker: "Balie 1", Afdeling: "Radiologie", Type: "Desktop" }, // prettier-ignore
-    { Ruimtenummer: "H1.001", "PC-naam": "AMP-PC-0422", Gebruiker: "Balie 2", Afdeling: "Radiologie", Type: "Laptop" }, // prettier-ignore
-    { Ruimtenummer: "H1.002", "PC-naam": "AMP-PC-0510", Gebruiker: "Dr. Jansen", Afdeling: "Cardiologie", Type: "Laptop" }, // prettier-ignore
-    { Ruimtenummer: "H1.003", "PC-naam": "AMP-PC-0333", Gebruiker: "Servicedesk", Afdeling: "ICT", Type: "Desktop" }, // prettier-ignore
+    { Ruimtenummer: "H1.001", "PC-naam": "AMP-PC-0421", Gebruiker: "Balie 1", Afdeling: "Radiologie", Type: "Desktop", OS: "Windows 11", "Laatste contact": "2026-07-20" }, // prettier-ignore
+    { Ruimtenummer: "H1.001", "PC-naam": "AMP-PC-0422", Gebruiker: "Balie 2", Afdeling: "Radiologie", Type: "Laptop", OS: "Windows 11", "Laatste contact": "2026-06-15" }, // prettier-ignore
+    { Ruimtenummer: "H1.002", "PC-naam": "AMP-PC-0510", Gebruiker: "Dr. Jansen", Afdeling: "Cardiologie", Type: "Laptop", OS: "Windows 10", "Laatste contact": "2026-07-21" }, // prettier-ignore
+    { Ruimtenummer: "H1.003", "PC-naam": "AMP-PC-0333", Gebruiker: "Servicedesk", Afdeling: "ICT", Type: "Desktop", OS: "Windows 11", "Laatste contact": "2026-01-10" }, // prettier-ignore
     // No matching pin on the demo plan — shows as "not on a map yet".
-    { Ruimtenummer: "H1.099", "PC-naam": "AMP-PC-9999", Gebruiker: "Onbekend", Afdeling: "Radiologie", Type: "Desktop" }, // prettier-ignore
+    { Ruimtenummer: "H1.099", "PC-naam": "AMP-PC-9999", Gebruiker: "Onbekend", Afdeling: "Radiologie", Type: "Desktop", OS: "Windows 10", "Laatste contact": "" }, // prettier-ignore
   ];
 
   await prisma.assetImport.deleteMany({ where: { id: "demo-import" } });

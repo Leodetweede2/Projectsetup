@@ -24,9 +24,12 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 // Target width of the rasterised image. Higher = crisper when zooming in the
 // viewer, at the cost of a larger file. Small PDFs are rendered at up to
 // MAX_SCALE; large-format plans are rendered down to at most MAX_WIDTH.
-// Raised so large-format (A0) plans stay legible when zoomed in on the map.
-const MAX_WIDTH = 7000;
-const MAX_SCALE = 5;
+// Raised so large-format (A0) plans keep their room numbers legible when zoomed.
+const MAX_WIDTH = 10000;
+const MAX_SCALE = 6;
+// Cap the total pixel count so a very large (or portrait) page can't exceed the
+// browser's canvas limit, which would make the PNG export silently fail.
+const MAX_AREA = 100_000_000; // 100 megapixels
 
 export function UploadFloorPlan({ knownRoomNumbers = [] }: { knownRoomNumbers?: string[] }) {
   const router = useRouter();
@@ -66,7 +69,8 @@ export function UploadFloorPlan({ knownRoomNumbers = [] }: { knownRoomNumbers?: 
   async function renderPage(doc: pdfjsLib.PDFDocumentProxy, pageNumber: number) {
     const p = await doc.getPage(pageNumber);
     const base = p.getViewport({ scale: 1 });
-    const scale = Math.min(MAX_SCALE, MAX_WIDTH / base.width);
+    const byArea = Math.sqrt(MAX_AREA / (base.width * base.height));
+    const scale = Math.min(MAX_SCALE, MAX_WIDTH / base.width, byArea);
     const viewport = p.getViewport({ scale });
     const canvas = canvasRef.current!;
     canvas.width = Math.floor(viewport.width);

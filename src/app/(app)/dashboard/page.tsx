@@ -33,8 +33,9 @@ export default async function DashboardPage() {
           <StatTile
             label="PCs without a location"
             value={stats.pcsUnlocated}
-            sub="No matching room pin yet"
+            sub={stats.pcsUnlocated > 0 ? "View which PCs these are" : "All PCs are placed"}
             tone={stats.pcsUnlocated > 0 ? "amber" : "green"}
+            href={stats.pcsUnlocated > 0 ? "/list?located=no" : undefined}
           />
           <StatTile
             label="Rooms with PCs"

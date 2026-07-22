@@ -3,6 +3,7 @@ import { hasAnyPermission } from "@/lib/rbac/hasPermission";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import Link from "next/link";
 import { AppNav, type NavGroup, type NavItem } from "@/components/AppNav";
+import { MobileNav } from "@/components/MobileNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AmphiaLogo } from "@/components/AmphiaLogo";
 
@@ -40,9 +41,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-canvas">
       <header className="sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur">
         <div className="flex h-14 w-full items-center justify-between px-6 lg:px-8">
-          <Link href="/dashboard" className="flex items-center" aria-label="Amphia — home">
-            <AmphiaLogo className="h-7" />
-          </Link>
+          <div className="flex items-center gap-3">
+            <MobileNav groups={nav} />
+            <Link href="/dashboard" className="flex items-center" aria-label="Amphia — home">
+              <AmphiaLogo className="h-7" />
+            </Link>
+          </div>
           <div className="flex items-center gap-3">
             <span className="hidden text-sm text-ink-muted sm:inline">{user.name}</span>
             <ThemeToggle />

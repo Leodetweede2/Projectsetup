@@ -2,14 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth/guards";
 import { hasPermission } from "@/lib/rbac/hasPermission";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
-import {
-  getDashboardStats,
-  getDepartmentStats,
-  getPivotStats,
-  getLocationStats,
-  getOsStats,
-  getActivityStats,
-} from "@/lib/maps/browse";
+import { getDashboardData } from "@/lib/maps/browse";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { StatTile } from "@/components/ui/StatTile";
@@ -25,16 +18,13 @@ export default async function DashboardPage({
   const user = await requireUser();
   const canSeeMaps = hasPermission(user, PERMISSIONS.MAPS_READ);
   const { prow, pcol } = await searchParams;
-  const [stats, deptStats, pivot, locations, osStats, activity] = canSeeMaps
-    ? await Promise.all([
-        getDashboardStats(),
-        getDepartmentStats(),
-        getPivotStats(prow, pcol),
-        getLocationStats(),
-        getOsStats(),
-        getActivityStats(),
-      ])
-    : [null, null, null, null, null, null];
+  const dash = canSeeMaps ? await getDashboardData(prow, pcol) : null;
+  const stats = dash?.stats ?? null;
+  const deptStats = dash?.department ?? null;
+  const pivot = dash?.pivot ?? null;
+  const locations = dash?.locations ?? null;
+  const osStats = dash?.os ?? null;
+  const activity = dash?.activity ?? null;
 
   return (
     <div className="space-y-6">

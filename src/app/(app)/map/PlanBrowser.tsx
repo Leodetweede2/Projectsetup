@@ -23,7 +23,7 @@ export interface SearchResult {
   roomId: string;
   number: string;
   planLabel: string;
-  matchedBy: "room" | "device";
+  matchedBy: "room" | "device" | "asset";
   deviceName?: string;
 }
 
@@ -66,10 +66,12 @@ export function PlanBrowser({
 }: Props) {
   const router = useRouter();
   const [onlyPcs, setOnlyPcs] = useState(false);
-  const [dept, setDept] = useState("");
+  const [attr, setAttr] = useState(""); // asset column to filter PCs on (e.g. Type)
+  const [attrVal, setAttrVal] = useState(""); // value the chosen attribute must equal
   const [pinFilter, setPinFilter] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(initialRoomId);
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
+  const detailsRef = useRef<HTMLDivElement | null>(null);
 
   // When arriving from a search, select and zoom to the target room (used when
   // only the ?room changes without the plan image reloading).
@@ -91,51 +93,63 @@ export function PlanBrowser({
     [assetColumns, assetRoomColumn],
   );
 
-  // Detect the department column (Afdeling / Department) for the filter.
-  const deptColumn = useMemo(
-    () => assetColumns.find((c) => /afdeling|department|dept|\bafd\b/i.test(c)) ?? null,
-    [assetColumns],
+  // A column that looks like a PC name/hostname, used as each PC card's title.
+  const nameCol = useMemo(
+    () => assetCols.find((c) => /pc.?naam|hostname|alias|asset|naam|name/i.test(c)) ?? null,
+    [assetCols],
   );
-  const roomDepts = useMemo(() => {
-    const map = new Map<string, string[]>();
-    if (deptColumn) {
-      for (const r of rooms) {
-        const list = r.assets.map((a) => (a[deptColumn] ?? "").trim()).filter(Boolean);
-        if (list.length) map.set(r.id, list);
+
+  // Distinct values of the chosen attribute across this plan (for the value box).
+  const attrValues = useMemo(() => {
+    if (!attr) return [];
+    const s = new Set<string>();
+    for (const r of rooms) {
+      for (const row of r.assets) {
+        const v = (row[attr] ?? "").trim();
+        if (v) s.add(v);
       }
     }
-    return map;
-  }, [rooms, deptColumn]);
-  const departmentOptions = useMemo(() => {
-    const s = new Set<string>();
-    for (const list of roomDepts.values()) for (const d of list) s.add(d);
     return [...s].sort((a, b) => a.localeCompare(b));
-  }, [roomDepts]);
+  }, [rooms, attr]);
+
+  // Searchable text per room: room fields + every asset (PC) value, so the free
+  // text box can match a PC name, OS, type, user, etc.
+  const roomText = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of rooms) {
+      const parts: (string | null)[] = [r.number, r.name, r.department];
+      for (const row of r.assets) for (const c of assetCols) parts.push(row[c] ?? null);
+      m.set(r.id, parts.filter(Boolean).join(" ").toLowerCase());
+    }
+    return m;
+  }, [rooms, assetCols]);
 
   // Rooms visible after applying the filters (others are dimmed on the plan).
   const shownRooms = useMemo(() => {
     const q = pinFilter.trim().toLowerCase();
     return rooms.filter((r) => {
       if (onlyPcs && pcCount(r) === 0) return false;
-      if (dept && !(roomDepts.get(r.id) ?? []).includes(dept)) return false;
-      if (q) {
-        const hay = [r.number, r.name, r.department, ...(roomDepts.get(r.id) ?? [])]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        if (!hay.includes(q)) return false;
+      if (attr && attrVal && !r.assets.some((row) => (row[attr] ?? "").trim() === attrVal)) {
+        return false;
       }
+      if (q && !(roomText.get(r.id) ?? "").includes(q)) return false;
       return true;
     });
-  }, [rooms, onlyPcs, dept, pinFilter, roomDepts]);
+  }, [rooms, onlyPcs, attr, attrVal, pinFilter, roomText]);
   const shownIds = useMemo(() => new Set(shownRooms.map((r) => r.id)), [shownRooms]);
 
-  const filtersActive = onlyPcs || dept !== "" || pinFilter.trim() !== "";
+  const filtersActive = onlyPcs || attr !== "" || pinFilter.trim() !== "";
   function clearFilters() {
     setOnlyPcs(false);
-    setDept("");
+    setAttr("");
+    setAttrVal("");
     setPinFilter("");
   }
+
+  // Bring the details panel into view when a room is selected by clicking a pin.
+  useEffect(() => {
+    if (selectedId) detailsRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [selectedId]);
 
   // Fit the plan to the viewport once the image has its real dimensions — and
   // jump to the deep-linked room if there is one. This fixes the plan appearing
@@ -178,7 +192,7 @@ export function PlanBrowser({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+    <div className="space-y-4">
       <div className="space-y-3">
         {/* Controls: navigation (location/floor) + filters, in one toolbar. */}
         <div className="divide-y divide-line rounded-lg border border-line bg-surface">
@@ -259,22 +273,42 @@ export function PlanBrowser({
             <input
               value={pinFilter}
               onChange={(e) => setPinFilter(e.target.value)}
-              placeholder="Filter rooms on this plan…"
+              placeholder="Filter rooms & PCs on this plan…"
               className="h-9 w-56 rounded-md border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-faint focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
             />
-            {deptColumn && departmentOptions.length > 0 && (
-              <select
-                value={dept}
-                onChange={(e) => setDept(e.target.value)}
-                className="h-9 rounded-md border border-line bg-surface px-2 text-sm text-ink focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
-              >
-                <option value="">All departments</option>
-                {departmentOptions.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
+            {assetCols.length > 0 && (
+              <div className="flex items-center gap-2">
+                <select
+                  value={attr}
+                  onChange={(e) => {
+                    setAttr(e.target.value);
+                    setAttrVal("");
+                  }}
+                  className="h-9 max-w-48 rounded-md border border-line bg-surface px-2 text-sm text-ink focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+                  title="Filter rooms by a PC property"
+                >
+                  <option value="">Filter by PC property…</option>
+                  {assetCols.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                {attr && (
+                  <select
+                    value={attrVal}
+                    onChange={(e) => setAttrVal(e.target.value)}
+                    className="h-9 max-w-48 rounded-md border border-line bg-surface px-2 text-sm text-ink focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+                  >
+                    <option value="">Any value</option>
+                    {attrValues.map((v) => (
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
             )}
             <label className="flex items-center gap-2 text-sm text-ink-muted">
               <input
@@ -328,7 +362,7 @@ export function PlanBrowser({
               <TransformComponent
                 wrapperStyle={{
                   width: "100%",
-                  height: "78vh",
+                  height: "72vh",
                   background: "rgb(var(--surface-2))",
                   borderRadius: "0.5rem",
                   border: "1px solid rgb(var(--line))",
@@ -398,53 +432,67 @@ export function PlanBrowser({
         </TransformWrapper>
       </div>
 
-      <div className="space-y-4">
-        {query && searchResults.length > 1 && (
-          <div className="rounded-lg border border-line bg-surface p-3 text-sm">
-            <p className="mb-2 font-medium text-ink-muted">{searchResults.length} matches</p>
-            <ul className="space-y-1">
-              {searchResults.slice(0, 25).map((r) => (
-                <li key={r.roomId}>
-                  <Link href={`/map?room=${r.roomId}`} className="text-brand-600 hover:underline">
-                    {r.number}
-                  </Link>
-                  <span className="text-ink-faint">
-                    {" "}
-                    — {r.planLabel}
-                    {r.matchedBy === "device" && r.deviceName ? ` · PC ${r.deviceName}` : ""}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+      {query && searchResults.length > 1 && (
+        <div className="rounded-lg border border-line bg-surface p-3 text-sm">
+          <p className="mb-2 font-medium text-ink-muted">{searchResults.length} matches</p>
+          <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
+            {searchResults.slice(0, 30).map((r) => (
+              <li key={r.roomId}>
+                <Link href={`/map?room=${r.roomId}`} className="text-brand-600 hover:underline">
+                  {r.number}
+                </Link>
+                <span className="text-ink-faint">
+                  {" "}
+                  — {r.planLabel}
+                  {r.matchedBy === "device" && r.deviceName ? ` · PC ${r.deviceName}` : ""}
+                  {r.matchedBy === "asset" ? " · in asset list" : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
+      {/* Selected room: full-width, readable PC details. */}
+      <div ref={detailsRef}>
         {selected ? (
-          <div className="rounded-lg border border-line bg-surface p-4">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-lg font-semibold text-ink">{selected.number}</h3>
-              {pcCount(selected) > 0 ? (
-                <Badge tone="red">{pcCount(selected)} PC(s)</Badge>
-              ) : (
-                <Badge tone="gray">no PCs</Badge>
-              )}
+          <div className="rounded-lg border border-line bg-surface p-4 md:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h3 className="text-lg font-semibold text-ink">{selected.number}</h3>
+                {(selected.name || selected.department) && (
+                  <p className="mt-0.5 text-sm text-ink-muted">
+                    {[selected.name, selected.department].filter(Boolean).join(" · ")}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {pcCount(selected) > 0 ? (
+                  <Badge tone="red">{pcCount(selected)} PC(s)</Badge>
+                ) : (
+                  <Badge tone="gray">no PCs</Badge>
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedId(null)}
+                >
+                  Close
+                </Button>
+              </div>
             </div>
-            {(selected.name || selected.department) && (
-              <p className="mt-1 text-sm text-ink-muted">
-                {[selected.name, selected.department].filter(Boolean).join(" · ")}
-              </p>
+
+            {selected.assets.length === 0 && selected.devices.length === 0 && (
+              <p className="mt-3 text-sm text-ink-faint">No PCs recorded for this room.</p>
             )}
 
-            <div className="mt-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-ink-faint">
-                PCs in this room
-              </p>
-              {selected.assets.length === 0 && selected.devices.length === 0 && (
-                <p className="mt-1 text-sm text-ink-faint">No PCs recorded for this room.</p>
-              )}
-
-              {selected.devices.length > 0 && (
-                <ul className="mt-1 space-y-0.5 text-sm text-ink-muted">
+            {selected.devices.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-faint">
+                  Linked devices
+                </p>
+                <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-ink-muted">
                   {selected.devices.map((d) => (
                     <li key={d.id}>
                       {d.name}
@@ -452,28 +500,37 @@ export function PlanBrowser({
                     </li>
                   ))}
                 </ul>
-              )}
-
-              <div className="mt-2 max-h-96 space-y-2 overflow-auto">
-                {selected.assets.map((row, i) => (
-                  <div key={i} className="rounded border border-line p-2 text-sm">
-                    {assetCols
-                      .filter((c) => (row[c] ?? "").trim())
-                      .map((c) => (
-                        <div key={c} className="flex justify-between gap-3">
-                          <span className="text-ink-faint">{c}</span>
-                          <span className="text-right font-medium text-ink-muted">{row[c]}</span>
-                        </div>
-                      ))}
-                  </div>
-                ))}
               </div>
-            </div>
+            )}
+
+            {selected.assets.length > 0 && (
+              <div className="mt-3 space-y-3">
+                {selected.assets.map((row, i) => {
+                  const fields = assetCols.filter((c) => (row[c] ?? "").trim());
+                  const title = (nameCol && row[nameCol]?.trim()) || `PC ${i + 1}`;
+                  return (
+                    <div key={i} className="rounded-lg border border-line bg-surface-2/50 p-3 md:p-4">
+                      <p className="mb-2 text-sm font-semibold text-ink">{title}</p>
+                      <dl className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        {fields.map((c) => (
+                          <div key={c} className="min-w-0">
+                            <dt className="truncate text-xs uppercase tracking-wide text-ink-faint" title={c}>
+                              {c}
+                            </dt>
+                            <dd className="break-words text-sm font-medium text-ink">{row[c]}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         ) : (
           <div className="rounded-lg border border-dashed border-line p-4 text-sm text-ink-faint">
-            Click a pin on the plan to see the room and the PCs in it. Search above to jump to a
-            specific room or PC, or switch to another floor plan.
+            Click a pin on the plan to see the room and the PCs in it — details appear here. Use the
+            search to jump to a specific room or PC, or the filters to narrow the pins.
           </div>
         )}
       </div>

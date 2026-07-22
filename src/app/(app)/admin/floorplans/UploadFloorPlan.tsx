@@ -24,8 +24,9 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 // Target width of the rasterised image. Higher = crisper when zooming in the
 // viewer, at the cost of a larger file. Small PDFs are rendered at up to
 // MAX_SCALE; large-format plans are rendered down to at most MAX_WIDTH.
-const MAX_WIDTH = 4500;
-const MAX_SCALE = 4;
+// Raised so large-format (A0) plans stay legible when zoomed in on the map.
+const MAX_WIDTH = 7000;
+const MAX_SCALE = 5;
 
 export function UploadFloorPlan({ knownRoomNumbers = [] }: { knownRoomNumbers?: string[] }) {
   const router = useRouter();

@@ -42,7 +42,7 @@ export interface LocationResult {
     floorPlan: { id: string; name: string; building: string | null; floor: string | null };
   };
   /** Why this room matched the query. */
-  matchedBy: "room" | "device";
+  matchedBy: "room" | "device" | "asset";
   deviceName?: string;
 }
 
@@ -91,6 +91,34 @@ export async function searchLocations(query: string): Promise<LocationResult[]> 
         matchedBy: "device",
         deviceName: device.name,
       });
+    }
+  }
+
+  // Also search the imported asset list (the PCs users actually look up), and
+  // resolve each matching PC to the placed room with the same room number.
+  const imp = await prisma.assetImport.findFirst({
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+  if (imp) {
+    const assetRecs = await prisma.assetRecord.findMany({
+      where: { importId: imp.id, searchText: { contains: q.toLowerCase() } },
+      select: { roomNumber: true },
+      take: 200,
+    });
+    if (assetRecs.length > 0) {
+      const wanted = new Set(assetRecs.map((a) => a.roomNumber)); // already normalised
+      const placed = await prisma.room.findMany({
+        include: {
+          floorPlan: { select: { id: true, name: true, building: true, floor: true } },
+        },
+      });
+      for (const room of placed) {
+        if (byRoomId.has(room.id)) continue;
+        if (wanted.has(normalizeRoomNumber(room.number))) {
+          byRoomId.set(room.id, { room, matchedBy: "asset" });
+        }
+      }
     }
   }
 

@@ -72,6 +72,14 @@ export function PlanBrowser({
   const [selectedId, setSelectedId] = useState<string | null>(initialRoomId);
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
   const detailsRef = useRef<HTMLDivElement | null>(null);
+  const pinsRef = useRef<HTMLDivElement | null>(null);
+
+  // Keep the pins a constant on-screen size by counter-scaling them against the
+  // current zoom (so the dots get smaller relative to the plan as you zoom in).
+  // Updated via a CSS variable on the pins layer — no React re-render per frame.
+  function setMapScale(scale: number) {
+    pinsRef.current?.style.setProperty("--map-scale", String(scale));
+  }
 
   // When arriving from a search, select and zoom to the target room (used when
   // only the ?room changes without the plan image reloading).
@@ -378,6 +386,7 @@ export function PlanBrowser({
           // momentum fling that carries (and re-aligns) the content.
           panning={{ velocityDisabled: true }}
           velocityAnimation={{ disabled: true }}
+          onTransform={(_ref, state) => setMapScale(state.scale)}
         >
           {({ zoomIn, zoomOut, resetTransform }) => (
             <div>
@@ -402,11 +411,8 @@ export function PlanBrowser({
                   cursor: "grab",
                 }}
                 contentClass="!w-full"
-                // Keep the plan on its own GPU layer so pan/zoom scale the
-                // existing texture instead of re-rasterising the huge image.
-                contentStyle={{ willChange: "transform" }}
               >
-                <div className="relative w-full">
+                <div className="relative w-full" ref={pinsRef}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={imageUrl}
@@ -429,10 +435,13 @@ export function PlanBrowser({
                           setSelectedId(room.id);
                         }}
                         title={`${room.number}${room.name ? ` — ${room.name}` : ""}`}
-                        className="absolute -translate-x-1/2 -translate-y-1/2"
+                        className="absolute"
                         style={{
                           left: `${room.x * 100}%`,
                           top: `${room.y * 100}%`,
+                          transform:
+                            "translate(-50%, -50%) scale(calc(1 / var(--map-scale, 1)))",
+                          transformOrigin: "center center",
                           zIndex: isSel ? 20 : hasPcs ? 10 : 1,
                         }}
                       >

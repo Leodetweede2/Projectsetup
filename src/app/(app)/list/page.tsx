@@ -6,8 +6,14 @@ import { AssetTable } from "./AssetTable";
 
 export const dynamic = "force-dynamic";
 
-export default async function AssetListPage() {
+export default async function AssetListPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ located?: string }>;
+}) {
   await requirePermission(PERMISSIONS.MAPS_READ);
+  const { located } = await searchParams;
+  const initialUnlocated = located === "no";
   const { import: imp, columns, rows } = await getAllAssetRows();
 
   if (!imp) {
@@ -35,7 +41,12 @@ export default async function AssetListPage() {
         </p>
       </div>
 
-      <AssetTable columns={columns} rows={rows} roomNumberColumn={imp.roomNumberColumn} />
+      <AssetTable
+        columns={columns}
+        rows={rows}
+        roomNumberColumn={imp.roomNumberColumn}
+        initialUnlocated={initialUnlocated}
+      />
     </div>
   );
 }

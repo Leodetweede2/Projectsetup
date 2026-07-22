@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { cn } from "@/lib/cn";
 
 type Tone = "brand" | "green" | "amber" | "slate";
@@ -22,17 +23,35 @@ export function StatTile({
   value,
   sub,
   tone = "slate",
+  href,
 }: {
   label: string;
   value: ReactNode;
   sub?: ReactNode;
   tone?: Tone;
+  /** When set, the tile becomes a link (with a hover affordance). */
+  href?: string;
 }) {
-  return (
-    <div className={cn("rounded-xl border p-4", toneClasses[tone])}>
-      <p className="text-sm font-medium text-ink-muted">{label}</p>
+  const className = cn(
+    "block rounded-xl border p-4",
+    toneClasses[tone],
+    href && "transition-colors hover:border-brand-400 hover:shadow-sm",
+  );
+  const body = (
+    <>
+      <p className="flex items-center justify-between text-sm font-medium text-ink-muted">
+        {label}
+        {href && <span aria-hidden className="text-ink-faint">→</span>}
+      </p>
       <p className={cn("mt-1 text-3xl font-bold tabular-nums", valueClasses[tone])}>{value}</p>
       {sub && <p className="mt-0.5 text-xs text-ink-faint">{sub}</p>}
-    </div>
+    </>
+  );
+  return href ? (
+    <Link href={href} className={className}>
+      {body}
+    </Link>
+  ) : (
+    <div className={className}>{body}</div>
   );
 }

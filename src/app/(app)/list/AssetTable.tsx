@@ -10,21 +10,24 @@ interface Props {
   columns: string[];
   rows: AssetTableRow[];
   roomNumberColumn: string;
+  /** Start with the "PCs without a location" filter on (from the dashboard). */
+  initialUnlocated?: boolean;
 }
 
 const PAGE_SIZE = 50;
 
-export function AssetTable({ columns, rows, roomNumberColumn }: Props) {
+export function AssetTable({ columns, rows, roomNumberColumn, initialUnlocated }: Props) {
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [onlyUnlocated, setOnlyUnlocated] = useState(!!initialUnlocated);
   const [sortCol, setSortCol] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [page, setPage] = useState(0);
 
-  const processed = useMemo(
-    () => filterSortRows(rows, columns, { query, filters, sortCol, sortDir }),
-    [rows, columns, query, filters, sortCol, sortDir],
-  );
+  const processed = useMemo(() => {
+    const base = onlyUnlocated ? rows.filter((r) => !r.roomId) : rows;
+    return filterSortRows(base, columns, { query, filters, sortCol, sortDir });
+  }, [rows, columns, query, filters, sortCol, sortDir, onlyUnlocated]);
 
   const pageCount = Math.max(1, Math.ceil(processed.length / PAGE_SIZE));
   const current = Math.min(page, pageCount - 1);
@@ -47,7 +50,8 @@ export function AssetTable({ columns, rows, roomNumberColumn }: Props) {
     setFilters((f) => ({ ...f, [col]: val }));
   }
 
-  const activeFilters = Object.values(filters).some((v) => v.trim()) || query.trim().length > 0;
+  const activeFilters =
+    Object.values(filters).some((v) => v.trim()) || query.trim().length > 0 || onlyUnlocated;
 
   return (
     <div className="space-y-3">
@@ -61,6 +65,18 @@ export function AssetTable({ columns, rows, roomNumberColumn }: Props) {
           placeholder="Search all columns…"
           className="h-10 w-72 rounded-md border border-line px-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
         />
+        <label className="flex items-center gap-2 text-sm text-ink-muted">
+          <input
+            type="checkbox"
+            checked={onlyUnlocated}
+            onChange={(e) => {
+              setOnlyUnlocated(e.target.checked);
+              setPage(0);
+            }}
+            className="h-4 w-4"
+          />
+          Only PCs without a location
+        </label>
         {activeFilters && (
           <Button
             type="button"
@@ -69,6 +85,7 @@ export function AssetTable({ columns, rows, roomNumberColumn }: Props) {
             onClick={() => {
               setQuery("");
               setFilters({});
+              setOnlyUnlocated(false);
               setPage(0);
             }}
           >

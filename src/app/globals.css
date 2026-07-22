@@ -35,12 +35,7 @@ body {
   color: rgb(var(--ink));
   background: rgb(var(--canvas));
   -webkit-font-smoothing: antialiased;
-}
-
-/* Smooth the light/dark transition for surfaces and text. */
-body,
-body * {
-  transition-property: background-color, border-color;
-  transition-duration: 150ms;
-  transition-timing-function: ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }

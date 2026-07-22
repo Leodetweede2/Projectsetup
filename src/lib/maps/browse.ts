@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { normalizeRoomNumber } from "./search";
+import { normalizeRoomNumber, planLabel } from "./search";
 import { getLatestImport } from "@/lib/assets/queries";
 
 /** All floor plans for the plan switcher. */
@@ -202,4 +202,129 @@ export async function getDepartmentStats(topN = 8): Promise<DepartmentStats> {
 
   const top = [...map.values()].sort((a, b) => b.total - a.total).slice(0, topN);
   return { column, count: map.size, top };
+}
+
+// ---------------------------------------------------------------------------
+// Pivot table (cross-tabulate the asset list by two columns)
+// ---------------------------------------------------------------------------
+
+export interface PivotStats {
+  /** Columns usable as a pivot dimension. */
+  available: string[];
+  rowCol: string;
+  colCol: string;
+  rowKeys: string[];
+  colKeys: string[];
+  /** counts[rowIndex][colIndex]. */
+  counts: number[][];
+  /** True totals per row / column (across all values, not just shown ones). */
+  rowTotals: number[];
+  colTotals: number[];
+  total: number;
+}
+
+const PIVOT_ROW_RE = /afdeling|department|dept|\bafd\b/i;
+const PIVOT_COL_RE = /strosname|osname|\bos\b|besturing|type|status/i;
+
+/**
+ * Cross-tabulate the latest asset import by two columns (a pivot table). Defaults
+ * to department (rows) × OS/type (columns) but either dimension can be any
+ * column. Rows/columns are capped to the busiest ones to stay readable.
+ */
+export async function getPivotStats(prow?: string, pcol?: string): Promise<PivotStats | null> {
+  const imp = await getLatestImport();
+  if (!imp) return null;
+  const available = imp.columns.filter((c) => c !== imp.roomNumberColumn);
+  if (available.length === 0) return null;
+
+  const rowCol =
+    (prow && available.includes(prow) && prow) ||
+    available.find((c) => PIVOT_ROW_RE.test(c)) ||
+    available[0];
+  const colCol =
+    (pcol && available.includes(pcol) && pcol !== rowCol && pcol) ||
+    available.find((c) => PIVOT_COL_RE.test(c) && c !== rowCol) ||
+    available.find((c) => c !== rowCol) ||
+    rowCol;
+
+  const recs = await prisma.assetRecord.findMany({
+    where: { importId: imp.id },
+    select: { data: true },
+  });
+
+  const cell = new Map<string, Map<string, number>>();
+  const rowTot = new Map<string, number>();
+  const colTot = new Map<string, number>();
+  for (const r of recs) {
+    const data = r.data as Record<string, string>;
+    const rk = (data[rowCol] ?? "").trim() || "—";
+    const ck = (data[colCol] ?? "").trim() || "—";
+    let row = cell.get(rk);
+    if (!row) {
+      row = new Map();
+      cell.set(rk, row);
+    }
+    row.set(ck, (row.get(ck) ?? 0) + 1);
+    rowTot.set(rk, (rowTot.get(rk) ?? 0) + 1);
+    colTot.set(ck, (colTot.get(ck) ?? 0) + 1);
+  }
+
+  const byCount = (a: [string, number], b: [string, number]) => b[1] - a[1];
+  const rowKeys = [...rowTot.entries()].sort(byCount).slice(0, 40).map((e) => e[0]);
+  const colKeys = [...colTot.entries()].sort(byCount).slice(0, 14).map((e) => e[0]);
+
+  return {
+    available,
+    rowCol,
+    colCol,
+    rowKeys,
+    colKeys,
+    counts: rowKeys.map((rk) => colKeys.map((ck) => cell.get(rk)?.get(ck) ?? 0)),
+    rowTotals: rowKeys.map((rk) => rowTot.get(rk) ?? 0),
+    colTotals: colKeys.map((ck) => colTot.get(ck) ?? 0),
+    total: recs.length,
+  };
+}
+
+export interface LocationStat {
+  label: string;
+  rooms: number;
+  pcs: number;
+}
+
+/** PCs and rooms per floor plan (location · floor), for the dashboard. */
+export async function getLocationStats(): Promise<LocationStat[]> {
+  const plans = await prisma.floorPlan.findMany({
+    orderBy: [{ building: "asc" }, { floor: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, building: true, floor: true, rooms: { select: { number: true } } },
+  });
+  if (plans.length === 0) return [];
+
+  // Assign each placed room number to the first plan that contains it.
+  const normToPlan = new Map<string, string>();
+  for (const p of plans) {
+    for (const rm of p.rooms) {
+      const key = normalizeRoomNumber(rm.number);
+      if (!normToPlan.has(key)) normToPlan.set(key, p.id);
+    }
+  }
+
+  const pcByPlan = new Map<string, number>();
+  const imp = await getLatestImport();
+  if (imp) {
+    const recs = await prisma.assetRecord.findMany({
+      where: { importId: imp.id },
+      select: { roomNumber: true },
+    });
+    for (const r of recs) {
+      const pid = normToPlan.get(r.roomNumber);
+      if (pid) pcByPlan.set(pid, (pcByPlan.get(pid) ?? 0) + 1);
+    }
+  }
+
+  return plans.map((p) => ({
+    label: planLabel(p),
+    rooms: p.rooms.length,
+    pcs: pcByPlan.get(p.id) ?? 0,
+  }));
 }

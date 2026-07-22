@@ -2,18 +2,35 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth/guards";
 import { hasPermission } from "@/lib/rbac/hasPermission";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
-import { getDashboardStats, getDepartmentStats } from "@/lib/maps/browse";
+import {
+  getDashboardStats,
+  getDepartmentStats,
+  getPivotStats,
+  getLocationStats,
+} from "@/lib/maps/browse";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { StatTile } from "@/components/ui/StatTile";
+import { Pivot } from "./Pivot";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ prow?: string; pcol?: string }>;
+}) {
   const user = await requireUser();
   const canSeeMaps = hasPermission(user, PERMISSIONS.MAPS_READ);
-  const [stats, deptStats] = canSeeMaps
-    ? await Promise.all([getDashboardStats(), getDepartmentStats()])
-    : [null, null];
+  const { prow, pcol } = await searchParams;
+  const [stats, deptStats, pivot, locations] = canSeeMaps
+    ? await Promise.all([
+        getDashboardStats(),
+        getDepartmentStats(),
+        getPivotStats(prow, pcol),
+        getLocationStats(),
+      ])
+    : [null, null, null, null];
 
   return (
     <div className="space-y-6">
@@ -94,6 +111,45 @@ export default async function DashboardPage() {
                 );
               })}
             </ul>
+          </CardBody>
+        </Card>
+      )}
+
+      {pivot && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pivot table</CardTitle>
+          </CardHeader>
+          <CardBody id="pivot">
+            <Pivot stats={pivot} />
+          </CardBody>
+        </Card>
+      )}
+
+      {locations && locations.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>PCs per location</CardTitle>
+          </CardHeader>
+          <CardBody className="p-0">
+            <Table>
+              <THead>
+                <TR>
+                  <TH>Location · floor</TH>
+                  <TH className="text-right">Rooms</TH>
+                  <TH className="text-right">PCs</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {locations.map((l, i) => (
+                  <TR key={i}>
+                    <TD className="font-medium text-ink">{l.label}</TD>
+                    <TD className="text-right tabular-nums">{l.rooms}</TD>
+                    <TD className="text-right tabular-nums">{l.pcs}</TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
           </CardBody>
         </Card>
       )}

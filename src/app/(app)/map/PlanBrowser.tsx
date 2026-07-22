@@ -402,6 +402,8 @@ export function PlanBrowser({
                     src={imageUrl}
                     alt={planName}
                     className="block w-full"
+                    draggable={false}
+                    decoding="async"
                     onLoad={handleImageLoad}
                   />
                   {rooms.map((room) => {
@@ -434,7 +436,7 @@ export function PlanBrowser({
                         )}
                         <span
                           className={[
-                            "block rounded-full border-2 border-white shadow",
+                            "block rounded-full border-2 border-white",
                             isSel ? "h-4 w-4 ring-2 ring-brand-500" : "h-3 w-3",
                             hasPcs ? "bg-red-600" : "bg-slate-400",
                           ].join(" ")}

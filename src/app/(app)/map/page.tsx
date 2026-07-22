@@ -3,7 +3,9 @@ import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { listFloorPlans, getPlanForBrowse } from "@/lib/maps/browse";
 import { searchLocations, planLabel } from "@/lib/maps/search";
-import { Card, CardBody } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { IconMap, IconFloorplan } from "@/components/icons";
 import { PlanBrowser, type SearchResult } from "./PlanBrowser";
 
 export const dynamic = "force-dynamic";
@@ -18,13 +20,13 @@ export default async function MapPage({
 
   if (plans.length === 0) {
     return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold text-ink">Map</h1>
-        <Card>
-          <CardBody className="text-ink-faint">
-            No floor plans yet. An administrator can upload one under Admin → Floor plans.
-          </CardBody>
-        </Card>
+      <div className="space-y-6">
+        <PageHeader title="Map" icon={<IconMap />} />
+        <EmptyState
+          icon={<IconFloorplan />}
+          title="No floor plans yet"
+          description="An administrator can upload one under Admin → Floor plans."
+        />
       </div>
     );
   }
@@ -60,13 +62,11 @@ export default async function MapPage({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-ink">Map</h1>
-        <p className="mt-1 text-sm text-ink-faint">
-          Search a PC or room, browse the floor plan, and click a pin to see the PCs in that
-          room.
-        </p>
-      </div>
+      <PageHeader
+        title="Map"
+        icon={<IconMap />}
+        description="Search a PC or room, browse the floor plan, and click a pin to see the PCs in that room."
+      />
       {plan && (
         <PlanBrowser
           planId={plan.id}

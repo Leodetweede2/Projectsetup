@@ -6,6 +6,7 @@ import { AppNav, type NavGroup, type NavItem } from "@/components/AppNav";
 import { MobileNav } from "@/components/MobileNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AmphiaLogo } from "@/components/AmphiaLogo";
+import { CommandPalette } from "@/components/CommandPalette";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
@@ -48,6 +49,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </Link>
           </div>
           <div className="flex items-center gap-3">
+            <CommandPalette groups={nav} />
             <span className="hidden text-sm text-ink-muted sm:inline">{user.name}</span>
             <ThemeToggle />
             <form action="/api/auth/logout" method="post">

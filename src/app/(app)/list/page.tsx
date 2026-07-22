@@ -1,7 +1,9 @@
 import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { getAllAssetRows } from "@/lib/assets/queries";
-import { Card, CardBody } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { IconList, IconImport } from "@/components/icons";
 import { AssetTable } from "./AssetTable";
 
 export const dynamic = "force-dynamic";
@@ -18,28 +20,30 @@ export default async function AssetListPage({
 
   if (!imp) {
     return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold text-ink">Asset list</h1>
-        <Card>
-          <CardBody className="text-ink-faint">
-            No asset list has been imported yet. An administrator can import one under
-            Admin → Import list.
-          </CardBody>
-        </Card>
+      <div className="space-y-6">
+        <PageHeader title="Asset list" icon={<IconList />} />
+        <EmptyState
+          icon={<IconImport />}
+          title="No asset list imported yet"
+          description="An administrator can import one under Admin → Import list."
+        />
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-ink">Asset list</h1>
-        <p className="mt-1 text-sm text-ink-faint">
-          From <span className="font-medium">{imp.filename}</span> · {imp.rowCount} rows.
-          Search, filter per column, and sort by clicking a header; rows link to their
-          location on the floor plan.
-        </p>
-      </div>
+      <PageHeader
+        title="Asset list"
+        icon={<IconList />}
+        description={
+          <>
+            From <span className="font-medium">{imp.filename}</span> · {imp.rowCount} rows.
+            Search, filter per column, and sort by clicking a header; rows link to their
+            location on the floor plan.
+          </>
+        }
+      />
 
       <AssetTable
         columns={columns}

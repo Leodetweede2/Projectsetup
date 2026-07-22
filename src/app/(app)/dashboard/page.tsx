@@ -6,6 +6,8 @@ import { getDashboardData } from "@/lib/maps/browse";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { StatTile } from "@/components/ui/StatTile";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { IconCpu, IconMap, IconBuilding, IconUsers, IconFloorplan, IconList, IconClock } from "@/components/icons";
 import { Pivot } from "./Pivot";
 
 export const dynamic = "force-dynamic";
@@ -28,10 +30,10 @@ export default async function DashboardPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-ink">Welcome, {user.name}</h1>
-        <p className="mt-1 text-sm text-ink-faint">You are signed in as {user.email}.</p>
-      </div>
+      <PageHeader
+        title={`Welcome, ${user.name}`}
+        description={`You are signed in as ${user.email}.`}
+      />
 
       {stats && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -40,6 +42,7 @@ export default async function DashboardPage({
             value={`${stats.pcsLocated} / ${stats.pcsTotal}`}
             sub={`${stats.locatedPct}% of the asset list is placed on a floor plan`}
             tone="brand"
+            icon={<IconCpu />}
           />
           <StatTile
             label="PCs without a location"
@@ -47,12 +50,14 @@ export default async function DashboardPage({
             sub={stats.pcsUnlocated > 0 ? "View which PCs these are" : "All PCs are placed"}
             tone={stats.pcsUnlocated > 0 ? "amber" : "green"}
             href={stats.pcsUnlocated > 0 ? "/list?located=no" : undefined}
+            icon={<IconMap />}
           />
           <StatTile
             label="Rooms with PCs"
             value={`${stats.roomsWithPcs} / ${stats.rooms}`}
             sub="Pinned rooms that have at least one PC"
             tone="slate"
+            icon={<IconBuilding />}
           />
           {deptStats?.column && (
             <StatTile
@@ -60,15 +65,17 @@ export default async function DashboardPage({
               value={deptStats.count}
               sub={`Distinct values in "${deptStats.column}"`}
               tone="slate"
+              icon={<IconUsers />}
             />
           )}
-          <StatTile label="Floor plans" value={stats.floorPlans} sub="Uploaded plans" tone="slate" />
-          <StatTile label="Rooms mapped" value={stats.rooms} sub="Pins across all plans" tone="slate" />
+          <StatTile label="Floor plans" value={stats.floorPlans} sub="Uploaded plans" tone="slate" icon={<IconFloorplan />} />
+          <StatTile label="Rooms mapped" value={stats.rooms} sub="Pins across all plans" tone="slate" icon={<IconMap />} />
           <StatTile
             label="Manually linked PCs"
             value={stats.devices}
             sub="Devices attached to a room by hand"
             tone="slate"
+            icon={<IconCpu />}
           />
           {activity && (
             <StatTile
@@ -76,6 +83,7 @@ export default async function DashboardPage({
               value={activity.stale}
               sub={`Not seen in "${activity.column}"`}
               tone={activity.stale > 0 ? "amber" : "green"}
+              icon={<IconClock />}
             />
           )}
           {osStats && (
@@ -84,6 +92,7 @@ export default async function DashboardPage({
               value={osStats.top.length}
               sub={`Distinct values in "${osStats.column}"`}
               tone="slate"
+              icon={<IconList />}
             />
           )}
         </div>

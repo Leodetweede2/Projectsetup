@@ -34,6 +34,12 @@ const config: Config = {
           faint: "rgb(var(--ink-faint) / <alpha-value>)",
         },
       },
+      boxShadow: {
+        // Soft, layered elevation (lighter than Tailwind's default shadows).
+        elevated: "0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06)",
+        lifted:
+          "0 10px 28px -8px rgb(15 23 42 / 0.16), 0 4px 10px -4px rgb(15 23 42 / 0.08)",
+      },
     },
   },
   plugins: [],

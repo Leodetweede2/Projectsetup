@@ -1,8 +1,10 @@
 import { requireUser } from "@/lib/auth/guards";
 import { hasAnyPermission } from "@/lib/rbac/hasPermission";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
+import Link from "next/link";
 import { AppNav, type NavGroup, type NavItem } from "@/components/AppNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { AmphiaLogo } from "@/components/AmphiaLogo";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
@@ -38,12 +40,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-canvas">
       <header className="sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur">
         <div className="flex h-14 w-full items-center justify-between px-6 lg:px-8">
-          <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-brand-600 text-sm font-bold text-white">
-              A
-            </div>
-            <span className="font-semibold text-ink">App Template</span>
-          </div>
+          <Link href="/dashboard" className="flex items-center" aria-label="Amphia — home">
+            <AmphiaLogo className="h-7" />
+          </Link>
           <div className="flex items-center gap-3">
             <span className="hidden text-sm text-ink-muted sm:inline">{user.name}</span>
             <ThemeToggle />

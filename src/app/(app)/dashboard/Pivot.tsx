@@ -81,7 +81,7 @@ export function Pivot({ stats }: { stats: PivotStats }) {
                     <td
                       key={ck}
                       className="px-3 py-1.5 text-right tabular-nums text-ink"
-                      style={n > 0 ? { backgroundColor: `rgba(37, 99, 235, ${alpha.toFixed(3)})` } : undefined}
+                      style={n > 0 ? { backgroundColor: `rgba(45, 118, 170, ${alpha.toFixed(3)})` } : undefined}
                     >
                       {n || ""}
                     </td>

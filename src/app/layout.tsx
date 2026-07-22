@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "App Template",
-  description: "Reusable Next.js starter with auth and RBAC.",
+  title: "Amphia — PC-locator",
+  description: "Find a PC's location on the Amphia floor plans.",
 };
 
 // Applies the saved theme before first paint, so there is no light/dark flash.

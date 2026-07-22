@@ -6,17 +6,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Amphia house style — built from the two official blues:
+        // lichtblauw #64B3E8 (brand-400) and donkerblauw #225D8A (brand-700).
         brand: {
-          50: "#eff6ff",
-          100: "#dbeafe",
-          200: "#bfdbfe",
-          300: "#93c5fd",
-          400: "#60a5fa",
-          500: "#3b82f6",
-          600: "#2563eb",
-          700: "#1d4ed8",
-          800: "#1e40af",
-          900: "#1e3a8a",
+          50: "#eef6fc",
+          100: "#d6ebf8",
+          200: "#b4d9f1",
+          300: "#8bc6ea",
+          400: "#64b3e8",
+          500: "#3f93c9",
+          600: "#2d76aa",
+          700: "#225d8a",
+          800: "#1d4c70",
+          900: "#1a4059",
         },
         // Semantic tokens (backed by CSS variables in globals.css) so the whole
         // UI flips between light and dark from a single source of truth.

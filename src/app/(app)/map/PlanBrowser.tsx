@@ -65,7 +65,7 @@ export function PlanBrowser({
   initialRoomId,
 }: Props) {
   const router = useRouter();
-  const [onlyPcs, setOnlyPcs] = useState(false);
+  const [onlyPcs, setOnlyPcs] = useState(true);
   const [attr, setAttr] = useState(""); // asset column to filter PCs on (e.g. Type)
   const [attrVal, setAttrVal] = useState(""); // value the chosen attribute must equal
   const [pinFilter, setPinFilter] = useState("");
@@ -138,13 +138,39 @@ export function PlanBrowser({
   }, [rooms, onlyPcs, attr, attrVal, pinFilter, roomText]);
   const shownIds = useMemo(() => new Set(shownRooms.map((r) => r.id)), [shownRooms]);
 
-  const filtersActive = onlyPcs || attr !== "" || pinFilter.trim() !== "";
+  // Filters that also narrow which PCs are shown inside a selected room.
+  const pcFilterActive = attr !== "" || pinFilter.trim() !== "";
+  const filtersActive = !onlyPcs || pcFilterActive;
   function clearFilters() {
-    setOnlyPcs(false);
+    setOnlyPcs(true);
     setAttr("");
     setAttrVal("");
     setPinFilter("");
   }
+
+  // The PCs (and devices) to show for the selected room. When a PC filter is
+  // active, show only the PCs in the room that match it (falling back to all if
+  // the room matched by something other than a PC, e.g. its room number).
+  const selectedPcs = useMemo(() => {
+    const empty = { assets: [], devices: [], filtered: false };
+    if (!selected) return empty as { assets: BrowseRoom["assets"]; devices: BrowseRoom["devices"]; filtered: boolean };
+    if (!pcFilterActive) return { assets: selected.assets, devices: selected.devices, filtered: false };
+    const q = pinFilter.trim().toLowerCase();
+    const assets = selected.assets.filter((row) => {
+      if (attr && attrVal && (row[attr] ?? "").trim() !== attrVal) return false;
+      if (q && !assetCols.map((c) => row[c] ?? "").join(" ").toLowerCase().includes(q)) return false;
+      return true;
+    });
+    const devices = selected.devices.filter((d) => {
+      if (attr && attrVal) return false; // devices carry no asset attributes
+      if (q) return `${d.name} ${d.assetTag ?? ""}`.toLowerCase().includes(q);
+      return true;
+    });
+    if (assets.length === 0 && devices.length === 0) {
+      return { assets: selected.assets, devices: selected.devices, filtered: false };
+    }
+    return { assets, devices, filtered: true };
+  }, [selected, pcFilterActive, attr, attrVal, pinFilter, assetCols]);
 
   // Bring the details panel into view when a room is selected by clicking a pin.
   useEffect(() => {
@@ -468,7 +494,11 @@ export function PlanBrowser({
               </div>
               <div className="flex items-center gap-2">
                 {pcCount(selected) > 0 ? (
-                  <Badge tone="red">{pcCount(selected)} PC(s)</Badge>
+                  <Badge tone="red">
+                    {selectedPcs.filtered
+                      ? `${selectedPcs.assets.length + selectedPcs.devices.length} of ${pcCount(selected)} PC(s)`
+                      : `${pcCount(selected)} PC(s)`}
+                  </Badge>
                 ) : (
                   <Badge tone="gray">no PCs</Badge>
                 )}
@@ -483,17 +513,23 @@ export function PlanBrowser({
               </div>
             </div>
 
+            {selectedPcs.filtered && (
+              <p className="mt-2 text-xs text-ink-faint">
+                Showing only the PCs in this room that match the active filter.
+              </p>
+            )}
+
             {selected.assets.length === 0 && selected.devices.length === 0 && (
               <p className="mt-3 text-sm text-ink-faint">No PCs recorded for this room.</p>
             )}
 
-            {selected.devices.length > 0 && (
+            {selectedPcs.devices.length > 0 && (
               <div className="mt-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-ink-faint">
                   Linked devices
                 </p>
                 <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-ink-muted">
-                  {selected.devices.map((d) => (
+                  {selectedPcs.devices.map((d) => (
                     <li key={d.id}>
                       {d.name}
                       {d.assetTag && <span className="text-ink-faint"> · {d.assetTag}</span>}
@@ -503,9 +539,9 @@ export function PlanBrowser({
               </div>
             )}
 
-            {selected.assets.length > 0 && (
+            {selectedPcs.assets.length > 0 && (
               <div className="mt-3 space-y-3">
-                {selected.assets.map((row, i) => {
+                {selectedPcs.assets.map((row, i) => {
                   const fields = assetCols.filter((c) => (row[c] ?? "").trim());
                   const title = (nameCol && row[nameCol]?.trim()) || `PC ${i + 1}`;
                   return (

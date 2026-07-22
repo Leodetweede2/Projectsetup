@@ -21,14 +21,15 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url,
 ).toString();
 
-// Rasterise each plan at the highest resolution the browser can reliably handle,
-// so room numbers stay sharp when zoomed. Two safety caps keep the export from
-// failing: the longest side must stay under the canvas side limit (~16384 px),
-// and the total pixel count is bounded for memory. Small PDFs are rendered at up
-// to MAX_SCALE. The largest scale respecting all three is chosen.
-const MAX_LONG_SIDE = 15000;
-const MAX_SCALE = 8;
-const MAX_AREA = 150_000_000; // ~150 megapixels
+// Rasterise each plan at a high but GPU-friendly resolution: sharp enough that
+// room numbers stay legible when zoomed, while keeping the image small enough to
+// live in a single GPU texture so pan/zoom stay smooth (a much larger image
+// forces the browser into slower tiled re-rasterisation). The longest side stays
+// well under the canvas side limit and the total pixel count is bounded; small
+// PDFs are rendered at up to MAX_SCALE.
+const MAX_LONG_SIDE = 12000;
+const MAX_SCALE = 6;
+const MAX_AREA = 100_000_000; // ~100 megapixels
 
 export function UploadFloorPlan({ knownRoomNumbers = [] }: { knownRoomNumbers?: string[] }) {
   const router = useRouter();

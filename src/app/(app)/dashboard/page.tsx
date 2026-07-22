@@ -99,42 +99,6 @@ export default async function DashboardPage({
         </div>
       )}
 
-      {deptStats?.column && deptStats.top.length > 0 && (
-        <Card>
-          <CardHeader className="flex items-center justify-between gap-4">
-            <CardTitle>PCs by department</CardTitle>
-            <span className="text-xs text-ink-faint">
-              Top {deptStats.top.length} of {deptStats.count} · bar = share placed on a plan
-            </span>
-          </CardHeader>
-          <CardBody>
-            <ul className="space-y-3">
-              {deptStats.top.map((d) => {
-                const pct = d.total ? Math.round((d.located / d.total) * 100) : 0;
-                return (
-                  <li key={d.name} className="space-y-1">
-                    <div className="flex items-center justify-between gap-3 text-sm">
-                      <span className="truncate font-medium text-ink" title={d.name}>
-                        {d.name}
-                      </span>
-                      <span className="shrink-0 tabular-nums text-ink-faint">
-                        {d.located} / {d.total} located · {pct}%
-                      </span>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-surface-2">
-                      <div
-                        className="h-full rounded-full bg-brand-500"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </CardBody>
-        </Card>
-      )}
-
       {(osStats || activity) && (
         <div className="grid gap-4 lg:grid-cols-2">
           {osStats && osStats.top.length > 0 && (

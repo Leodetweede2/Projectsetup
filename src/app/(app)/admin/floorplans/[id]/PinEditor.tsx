@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import {
   createRoomAction,
   updateRoomAction,
@@ -43,15 +44,26 @@ export function PinEditor({ plan, rooms, unplaced }: Props) {
   const selected = rooms.find((r) => r.id === selectedId) ?? null;
   const imageUrl = `/api/floorplans/${plan.id}/image`;
 
-  function coordsFromEvent(e: React.MouseEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
-    const y = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
+  const imgRef = useRef<HTMLImageElement>(null);
+  const pinsRef = useRef<HTMLDivElement>(null);
+  // Pointer-down position, to tell a click-to-place from a drag-to-pan.
+  const downRef = useRef<{ x: number; y: number } | null>(null);
+
+  /** Keep pins a constant on-screen size regardless of zoom. */
+  function setMapScale(scale: number) {
+    pinsRef.current?.style.setProperty("--map-scale", String(scale));
+  }
+
+  /** Map a screen point to an image fraction (0..1), honouring zoom/pan. */
+  function fractionFromPoint(clientX: number, clientY: number) {
+    const rect = imgRef.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0 || rect.height === 0) return null;
+    const x = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    const y = Math.min(1, Math.max(0, (clientY - rect.top) / rect.height));
     return { x, y };
   }
 
-  function onMapClick(e: React.MouseEvent<HTMLDivElement>) {
-    const { x, y } = coordsFromEvent(e);
+  function placeAt(x: number, y: number) {
     if (moveMode && selected) {
       const fd = new FormData();
       fd.set("roomId", selected.id);
@@ -66,6 +78,18 @@ export function PinEditor({ plan, rooms, unplaced }: Props) {
     setSelectedId(null);
     setState({});
     setPending({ x, y });
+  }
+
+  function onMapPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    downRef.current = { x: e.clientX, y: e.clientY };
+  }
+
+  function onMapClick(e: React.MouseEvent<HTMLDivElement>) {
+    const down = downRef.current;
+    // Ignore the click that ends a pan (the pointer moved more than a few px).
+    if (down && (Math.abs(e.clientX - down.x) > 6 || Math.abs(e.clientY - down.y) > 6)) return;
+    const frac = fractionFromPoint(e.clientX, e.clientY);
+    if (frac) placeAt(frac.x, frac.y);
   }
 
   function run(action: (p: ActionState, fd: FormData) => Promise<ActionState>, fd: FormData, onOk?: () => void) {
@@ -85,60 +109,119 @@ export function PinEditor({ plan, rooms, unplaced }: Props) {
             ? "Click the map to move the selected pin."
             : prefillNumber
               ? `Click the map to place room ${prefillNumber}.`
-              : "Click an empty spot to add a room, or click a pin to edit it."}
+              : "Scroll to zoom, drag to pan. Click an empty spot to add a room, or a pin to edit it."}
         </p>
-        <div className="overflow-auto rounded-lg border border-line bg-surface-2">
-          <div
-            className="relative w-full cursor-crosshair select-none"
-            onClick={onMapClick}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imageUrl} alt={plan.name} className="block w-full" />
-
-            {rooms.map((room) => (
-              <button
-                key={room.id}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPending(null);
-                  setState({});
-                  setMoveMode(false);
-                  setSelectedId(room.id);
+        <TransformWrapper
+          initialScale={1}
+          minScale={1}
+          maxScale={12}
+          limitToBounds
+          centerZoomedOut={false}
+          doubleClick={{ disabled: true }}
+          wheel={{ step: 0.03 }}
+          disablePadding
+          panning={{ velocityDisabled: true }}
+          velocityAnimation={{ disabled: true }}
+          onTransform={(_ref, state) => setMapScale(state.scale)}
+        >
+          {({ zoomIn, zoomOut, resetTransform }) => (
+            <div>
+              <div className="mb-2 flex gap-2">
+                <Button type="button" size="sm" variant="secondary" onClick={() => zoomIn()}>
+                  Zoom in
+                </Button>
+                <Button type="button" size="sm" variant="secondary" onClick={() => zoomOut()}>
+                  Zoom out
+                </Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => resetTransform()}>
+                  Reset
+                </Button>
+              </div>
+              <TransformComponent
+                wrapperStyle={{
+                  width: "100%",
+                  height: "70vh",
+                  background: "rgb(var(--surface-2))",
+                  borderRadius: "0.5rem",
+                  border: "1px solid rgb(var(--line))",
+                  cursor: "crosshair",
                 }}
-                title={`${room.number}${room.name ? ` — ${room.name}` : ""}`}
-                className={`absolute -translate-x-1/2 -translate-y-full ${
-                  selectedId === room.id ? "z-10" : ""
-                }`}
-                style={{ left: `${room.x * 100}%`, top: `${room.y * 100}%` }}
+                contentClass="!w-full"
               >
-                <span
-                  className={`flex flex-col items-center ${
-                    selectedId === room.id ? "text-brand-700" : "text-red-600"
-                  }`}
+                <div
+                  className="relative w-full select-none"
+                  ref={pinsRef}
+                  onPointerDown={onMapPointerDown}
+                  onClick={onMapClick}
                 >
-                  <span className="max-w-[8rem] truncate rounded bg-surface/90 px-1 text-[10px] font-semibold shadow">
-                    {room.number}
-                  </span>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" />
-                  </svg>
-                </span>
-              </button>
-            ))}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    ref={imgRef}
+                    src={imageUrl}
+                    alt={plan.name}
+                    className="block w-full"
+                    draggable={false}
+                  />
 
-            {pending && (
-              <span
-                className="absolute -translate-x-1/2 -translate-y-full text-brand-600"
-                style={{ left: `${pending.x * 100}%`, top: `${pending.y * 100}%` }}
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7z" />
-                </svg>
-              </span>
-            )}
-          </div>
-        </div>
+                  {rooms.map((room) => (
+                    <button
+                      key={room.id}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPending(null);
+                        setState({});
+                        setMoveMode(false);
+                        setSelectedId(room.id);
+                      }}
+                      title={`${room.number}${room.name ? ` — ${room.name}` : ""}`}
+                      className="absolute"
+                      style={{
+                        left: `${room.x * 100}%`,
+                        top: `${room.y * 100}%`,
+                        transform:
+                          "translate(-50%, -100%) scale(calc(1 / var(--map-scale, 1)))",
+                        transformOrigin: "50% 100%",
+                        zIndex: selectedId === room.id ? 20 : 10,
+                      }}
+                    >
+                      <span
+                        className={`flex flex-col items-center ${
+                          selectedId === room.id ? "text-brand-700" : "text-red-600"
+                        }`}
+                      >
+                        <span className="max-w-[8rem] truncate rounded bg-surface/90 px-1 text-[10px] font-semibold shadow">
+                          {room.number}
+                        </span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" />
+                        </svg>
+                      </span>
+                    </button>
+                  ))}
+
+                  {pending && (
+                    <span
+                      className="pointer-events-none absolute text-brand-600"
+                      style={{
+                        left: `${pending.x * 100}%`,
+                        top: `${pending.y * 100}%`,
+                        transform:
+                          "translate(-50%, -100%) scale(calc(1 / var(--map-scale, 1)))",
+                        transformOrigin: "50% 100%",
+                        zIndex: 30,
+                      }}
+                    >
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7z" />
+                      </svg>
+                    </span>
+                  )}
+                </div>
+              </TransformComponent>
+            </div>
+          )}
+        </TransformWrapper>
       </div>
 
       {/* Panel */}

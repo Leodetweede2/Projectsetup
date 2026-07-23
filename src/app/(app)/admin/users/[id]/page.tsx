@@ -1,9 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { IconUsers } from "@/components/icons";
 import { EditUserForm } from "./EditUserForm";
 
 export const dynamic = "force-dynamic";
@@ -24,12 +25,12 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
 
   return (
     <div className="max-w-2xl space-y-6">
-      <div>
-        <Link href="/admin/users" className="text-sm text-brand-600 hover:underline">
-          ← Back to users
-        </Link>
-        <h1 className="mt-2 text-2xl font-bold text-ink">Edit user</h1>
-      </div>
+      <PageHeader
+        title="Edit user"
+        icon={<IconUsers />}
+        description={user.email}
+        back={{ href: "/admin/users", label: "Back to users" }}
+      />
       <Card>
         <CardHeader>
           <CardTitle>{user.email}</CardTitle>

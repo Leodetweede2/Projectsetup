@@ -1,10 +1,11 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { planLabel } from "@/lib/maps/search";
 import { Card, CardBody } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { IconFloorplan } from "@/components/icons";
 import { PinEditor } from "./PinEditor";
 
 export const dynamic = "force-dynamic";
@@ -32,13 +33,12 @@ export default async function FloorPlanEditorPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/admin/floorplans" className="text-sm text-brand-600 hover:underline">
-          ← Back to floor plans
-        </Link>
-        <h1 className="mt-2 text-2xl font-bold text-ink">{plan.name}</h1>
-        <p className="text-sm text-ink-faint">{planLabel(plan)}</p>
-      </div>
+      <PageHeader
+        title={plan.name}
+        icon={<IconFloorplan />}
+        description={planLabel(plan)}
+        back={{ href: "/admin/floorplans", label: "Back to floor plans" }}
+      />
 
       <Card>
         <CardBody>

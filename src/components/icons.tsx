@@ -138,6 +138,18 @@ export const IconCornerDownLeft = (p: P) => (
     <path d="M20 4v7a4 4 0 0 1-4 4H4" />
   </I>
 );
+export const IconCopy = (p: P) => (
+  <I {...p}>
+    <rect x="9" y="9" width="11" height="11" rx="2" />
+    <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+  </I>
+);
+export const IconDownload = (p: P) => (
+  <I {...p}>
+    <path d="M12 3v12M8 11l4 4 4-4" />
+    <path d="M4 21h16" />
+  </I>
+);
 
 /** Icon for a nav destination, chosen by its href. */
 export function navIcon(href: string): ReactNode {

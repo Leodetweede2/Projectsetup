@@ -10,6 +10,7 @@ import {
 } from "react-zoom-pan-pinch";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { CopyButton } from "@/components/ui/CopyButton";
 import type { BrowseRoom } from "@/lib/maps/browse";
 
 interface PlanOption {
@@ -548,9 +549,10 @@ export function PlanBrowser({
                 </p>
                 <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-ink-muted">
                   {selectedPcs.devices.map((d) => (
-                    <li key={d.id}>
+                    <li key={d.id} className="flex items-center gap-1">
                       {d.name}
                       {d.assetTag && <span className="text-ink-faint"> · {d.assetTag}</span>}
+                      <CopyButton value={d.name} label="PC name" />
                     </li>
                   ))}
                 </ul>
@@ -564,7 +566,10 @@ export function PlanBrowser({
                   const title = (nameCol && row[nameCol]?.trim()) || `PC ${i + 1}`;
                   return (
                     <div key={i} className="rounded-lg border border-line bg-surface-2/50 p-3 md:p-4">
-                      <p className="mb-2 text-sm font-semibold text-ink">{title}</p>
+                      <div className="mb-2 flex items-center gap-1.5">
+                        <p className="text-sm font-semibold text-ink">{title}</p>
+                        <CopyButton value={title} label="PC name" />
+                      </div>
                       <dl className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {fields.map((c) => (
                           <div key={c} className="min-w-0">

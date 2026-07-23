@@ -3,8 +3,10 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { IconDownload } from "@/components/icons";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { filterSortRows, type AssetTableRow, type SortDir } from "@/lib/assets/table";
+import { toCsv } from "@/lib/assets/csv";
 
 interface Props {
   columns: string[];
@@ -53,6 +55,22 @@ export function AssetTable({ columns, rows, roomNumberColumn, initialUnlocated }
   const activeFilters =
     Object.values(filters).some((v) => v.trim()) || query.trim().length > 0 || onlyUnlocated;
 
+  function exportCsv() {
+    const headers = [...columns, "Located"];
+    const body = processed.map((r) => [
+      ...columns.map((c) => r.data[c] ?? ""),
+      r.roomId ? "yes" : "no",
+    ]);
+    const csv = toCsv(headers, body);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `asset-list-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
@@ -95,6 +113,17 @@ export function AssetTable({ columns, rows, roomNumberColumn, initialUnlocated }
         <span className="text-sm text-ink-faint">
           {processed.length} of {rows.length} rows
         </span>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={exportCsv}
+          disabled={processed.length === 0}
+          className="ml-auto inline-flex items-center gap-1.5"
+        >
+          <IconDownload width={15} height={15} />
+          Export CSV
+        </Button>
       </div>
 
       <div className="rounded-xl border border-line bg-surface">

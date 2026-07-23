@@ -20,7 +20,6 @@ export async function GET(req: Request) {
     number: r.room.number,
     label: planLabel(r.room.floorPlan),
     matchedBy: r.matchedBy,
-    deviceName: r.deviceName ?? null,
   }));
   return NextResponse.json({ results });
 }

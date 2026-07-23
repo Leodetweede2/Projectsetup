@@ -42,13 +42,12 @@ export interface LocationResult {
     floorPlan: { id: string; name: string; building: string | null; floor: string | null };
   };
   /** Why this room matched the query. */
-  matchedBy: "room" | "device" | "asset";
-  deviceName?: string;
+  matchedBy: "room" | "asset";
 }
 
 /**
  * Search rooms by number/name/department, plus rooms reachable via a matching
- * device (PC hostname / asset tag). Returns de-duplicated rooms.
+ * PC in the imported asset list. Returns de-duplicated rooms.
  */
 export async function searchLocations(query: string): Promise<LocationResult[]> {
   const q = query.trim();
@@ -56,42 +55,19 @@ export async function searchLocations(query: string): Promise<LocationResult[]> 
 
   const contains = { contains: q, mode: "insensitive" as const };
 
-  const [rooms, devices] = await Promise.all([
-    prisma.room.findMany({
-      where: { OR: [{ number: contains }, { name: contains }, { department: contains }] },
-      include: {
-        floorPlan: { select: { id: true, name: true, building: true, floor: true } },
-      },
-      orderBy: { number: "asc" },
-      take: 50,
-    }),
-    prisma.device.findMany({
-      where: { AND: [{ roomId: { not: null } }, { OR: [{ name: contains }, { assetTag: contains }] }] },
-      include: {
-        room: {
-          include: {
-            floorPlan: { select: { id: true, name: true, building: true, floor: true } },
-          },
-        },
-      },
-      take: 50,
-    }),
-  ]);
+  const rooms = await prisma.room.findMany({
+    where: { OR: [{ number: contains }, { name: contains }, { department: contains }] },
+    include: {
+      floorPlan: { select: { id: true, name: true, building: true, floor: true } },
+    },
+    orderBy: { number: "asc" },
+    take: 50,
+  });
 
   const byRoomId = new Map<string, LocationResult>();
 
   for (const room of rooms) {
     byRoomId.set(room.id, { room, matchedBy: "room" });
-  }
-  for (const device of devices) {
-    if (!device.room) continue;
-    if (!byRoomId.has(device.room.id)) {
-      byRoomId.set(device.room.id, {
-        room: device.room,
-        matchedBy: "device",
-        deviceName: device.name,
-      });
-    }
   }
 
   // Also search the imported asset list (the PCs users actually look up), and

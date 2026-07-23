@@ -27,11 +27,10 @@ describe("computeCore", () => {
   it("counts located/unlocated PCs and rooms with PCs", () => {
     const stats = computeCore({
       floorPlans: 2,
-      devices: 1,
       rooms: [
-        { number: "H1.001", deviceCount: 1 }, // has a device
-        { number: "H1.002", deviceCount: 0 }, // has an asset PC
-        { number: "H1.003", deviceCount: 0 }, // empty
+        { number: "H1.001" }, // no asset PC
+        { number: "H1.002" }, // has an asset PC
+        { number: "H1.003" }, // empty
       ],
       roomNorms: new Set(["H1001", "H1002", "H1003"]),
       assetRoomNumbers: ["H1002", "H1002", "H9999"], // 2 located (H1002), 1 unlocated
@@ -41,15 +40,13 @@ describe("computeCore", () => {
     expect(stats.pcsUnlocated).toBe(1);
     expect(stats.locatedPct).toBe(67);
     expect(stats.rooms).toBe(3);
-    expect(stats.roomsWithPcs).toBe(2); // H1.001 (device) + H1.002 (asset)
+    expect(stats.roomsWithPcs).toBe(1); // only H1.002 has an asset PC
     expect(stats.floorPlans).toBe(2);
-    expect(stats.devices).toBe(1);
   });
 
   it("handles an empty asset list", () => {
     const stats = computeCore({
       floorPlans: 0,
-      devices: 0,
       rooms: [],
       roomNorms: new Set(),
       assetRoomNumbers: [],

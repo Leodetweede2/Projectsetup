@@ -49,7 +49,6 @@ export interface BrowseRoom {
   department: string | null;
   x: number;
   y: number;
-  devices: { id: string; name: string; assetTag: string | null }[];
   /** Asset-list rows whose room number matches this room. */
   assets: Record<string, string>[];
 }
@@ -66,7 +65,7 @@ export interface BrowsePlan {
   rooms: BrowseRoom[];
 }
 
-/** A plan with all its rooms, linked devices, and the asset rows for each room. */
+/** A plan with all its rooms and the asset rows for each room. */
 export async function getPlanForBrowse(planId: string): Promise<BrowsePlan | null> {
   const plan = await prisma.floorPlan.findUnique({
     where: { id: planId },
@@ -84,7 +83,6 @@ export async function getPlanForBrowse(planId: string): Promise<BrowsePlan | nul
           department: true,
           x: true,
           y: true,
-          devices: { orderBy: { name: "asc" }, select: { id: true, name: true, assetTag: true } },
         },
       },
     },
@@ -124,7 +122,6 @@ export async function getPlanForBrowse(planId: string): Promise<BrowsePlan | nul
       department: r.department,
       x: r.x,
       y: r.y,
-      devices: r.devices,
       assets: assetsByNorm.get(normalizeRoomNumber(r.number)) ?? [],
     })),
   };
@@ -140,24 +137,23 @@ export interface DashboardData {
 }
 
 /**
- * All dashboard statistics in one pass. Fetches the asset list, plans (with
- * rooms) and the device count once, then computes every card from that in-memory
- * data via the pure helpers in ./stats — instead of scanning the asset list
- * separately for each statistic.
+ * All dashboard statistics in one pass. Fetches the asset list and plans (with
+ * rooms) once, then computes every card from that in-memory data via the pure
+ * helpers in ./stats — instead of scanning the asset list separately for each
+ * statistic.
  */
 export async function getDashboardData(prow?: string, pcol?: string): Promise<DashboardData> {
   const imp = await getLatestImport();
-  const [planRows, deviceCount, records] = await Promise.all([
+  const [planRows, records] = await Promise.all([
     prisma.floorPlan.findMany({
       orderBy: [{ building: "asc" }, { floor: "asc" }, { name: "asc" }],
       select: {
         name: true,
         building: true,
         floor: true,
-        rooms: { select: { number: true, _count: { select: { devices: true } } } },
+        rooms: { select: { number: true } },
       },
     }),
-    prisma.device.count(),
     imp
       ? prisma.assetRecord.findMany({
           where: { importId: imp.id },
@@ -166,9 +162,7 @@ export async function getDashboardData(prow?: string, pcol?: string): Promise<Da
       : Promise.resolve([] as { roomNumber: string; data: unknown }[]),
   ]);
 
-  const allRooms = planRows.flatMap((p) =>
-    p.rooms.map((r) => ({ number: r.number, deviceCount: r._count.devices })),
-  );
+  const allRooms = planRows.flatMap((p) => p.rooms.map((r) => ({ number: r.number })));
   const roomNorms = new Set(allRooms.map((r) => normalizeRoomNumber(r.number)));
 
   const recLite: AssetRecordLite[] = records.map((r) => ({
@@ -192,7 +186,6 @@ export async function getDashboardData(prow?: string, pcol?: string): Promise<Da
   return {
     stats: computeCore({
       floorPlans: planRows.length,
-      devices: deviceCount,
       rooms: allRooms,
       roomNorms,
       assetRoomNumbers,

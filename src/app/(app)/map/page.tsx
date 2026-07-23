@@ -40,7 +40,6 @@ export default async function MapPage({
     number: r.room.number,
     planLabel: planLabel(r.room.floorPlan),
     matchedBy: r.matchedBy,
-    deviceName: r.deviceName,
   }));
 
   // Resolve which room/plan to show: an explicit ?room, else the top search hit.

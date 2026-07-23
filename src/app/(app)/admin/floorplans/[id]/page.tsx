@@ -21,12 +21,7 @@ export default async function FloorPlanEditorPage({
   const plan = await prisma.floorPlan.findUnique({
     where: { id },
     include: {
-      rooms: {
-        orderBy: { number: "asc" },
-        include: {
-          devices: { orderBy: { name: "asc" }, select: { id: true, name: true, assetTag: true } },
-        },
-      },
+      rooms: { orderBy: { number: "asc" } },
     },
   });
   if (!plan) notFound();
@@ -51,7 +46,6 @@ export default async function FloorPlanEditorPage({
               department: r.department,
               x: r.x,
               y: r.y,
-              devices: r.devices,
             }))}
           />
         </CardBody>

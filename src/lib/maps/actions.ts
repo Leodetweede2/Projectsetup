@@ -6,7 +6,6 @@ import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { AUDIT_ACTIONS, logAudit } from "@/lib/audit";
 import {
-  deviceSaveSchema,
   floorPlanUpdateSchema,
   roomCreateSchema,
   roomMoveSchema,
@@ -127,58 +126,6 @@ export async function deleteRoomAction(formData: FormData): Promise<void> {
     targetId: roomId,
   });
   editorPath(room.floorPlanId);
-}
-
-// --- Devices ---------------------------------------------------------------
-
-export async function saveDeviceAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  const actor = await requirePermission(PERMISSIONS.MAPS_WRITE);
-  const parsed = deviceSaveSchema.safeParse({
-    id: formData.get("id"),
-    roomId: formData.get("roomId"),
-    name: formData.get("name"),
-    assetTag: formData.get("assetTag"),
-  });
-  if (!parsed.success) return { fieldErrors: fieldErrorsFrom(parsed.error) };
-
-  const { id, roomId, name, assetTag } = parsed.data;
-  const room = await prisma.room.findUnique({ where: { id: roomId } });
-  if (!room) return { error: "Room not found." };
-
-  if (id) {
-    await prisma.device.update({
-      where: { id },
-      data: { name, assetTag: assetTag || null, roomId },
-    });
-  } else {
-    await prisma.device.create({ data: { name, assetTag: assetTag || null, roomId } });
-  }
-  await logAudit({
-    action: AUDIT_ACTIONS.DEVICE_SAVED,
-    actorUserId: actor.id,
-    targetType: "device",
-    targetId: id || undefined,
-    metadata: { name, roomId },
-  });
-  editorPath(room.floorPlanId);
-  return { success: `PC ${name} saved.` };
-}
-
-export async function deleteDeviceAction(formData: FormData): Promise<void> {
-  const actor = await requirePermission(PERMISSIONS.MAPS_WRITE);
-  const id = String(formData.get("id"));
-  const floorPlanId = String(formData.get("floorPlanId"));
-  await prisma.device.delete({ where: { id } });
-  await logAudit({
-    action: AUDIT_ACTIONS.DEVICE_DELETED,
-    actorUserId: actor.id,
-    targetType: "device",
-    targetId: id,
-  });
-  if (floorPlanId) editorPath(floorPlanId);
 }
 
 // --- Floor plan ------------------------------------------------------------

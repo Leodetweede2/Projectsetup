@@ -70,13 +70,6 @@ export default async function DashboardPage({
           )}
           <StatTile label="Floor plans" value={stats.floorPlans} sub="Uploaded plans" tone="slate" icon={<IconFloorplan />} />
           <StatTile label="Rooms mapped" value={stats.rooms} sub="Pins across all plans" tone="slate" icon={<IconMap />} />
-          <StatTile
-            label="Manually linked PCs"
-            value={stats.devices}
-            sub="Devices attached to a room by hand"
-            tone="slate"
-            icon={<IconCpu />}
-          />
           {activity && (
             <StatTile
               label="Inactive PCs (90+ days)"

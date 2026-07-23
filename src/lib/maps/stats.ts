@@ -36,31 +36,28 @@ export interface DashboardStats {
   pcsLocated: number;
   pcsUnlocated: number;
   locatedPct: number;
-  devices: number;
 }
 
 export interface RoomLite {
   number: string;
-  deviceCount: number;
 }
 
 /** High-level counts (PCs located, rooms with PCs, etc.). */
 export function computeCore(input: {
   floorPlans: number;
-  devices: number;
   rooms: RoomLite[];
   roomNorms: Set<string>;
   assetRoomNumbers: string[];
 }): DashboardStats {
-  const { floorPlans, devices, rooms, roomNorms, assetRoomNumbers } = input;
+  const { floorPlans, rooms, roomNorms, assetRoomNumbers } = input;
   const assetNorms = new Set(assetRoomNumbers);
 
   const pcsTotal = assetRoomNumbers.length;
   let pcsLocated = 0;
   for (const n of assetRoomNumbers) if (roomNorms.has(n)) pcsLocated += 1;
 
-  const roomsWithPcs = rooms.filter(
-    (r) => r.deviceCount > 0 || assetNorms.has(normalizeRoomNumber(r.number)),
+  const roomsWithPcs = rooms.filter((r) =>
+    assetNorms.has(normalizeRoomNumber(r.number)),
   ).length;
 
   return {
@@ -71,7 +68,6 @@ export function computeCore(input: {
     pcsLocated,
     pcsUnlocated: pcsTotal - pcsLocated,
     locatedPct: pcsTotal ? Math.round((pcsLocated / pcsTotal) * 100) : 0,
-    devices,
   };
 }
 

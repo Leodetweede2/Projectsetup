@@ -26,8 +26,6 @@ export const AUDIT_ACTIONS = {
   ROOM_CREATED: "room.created",
   ROOM_UPDATED: "room.updated",
   ROOM_DELETED: "room.deleted",
-  DEVICE_SAVED: "device.saved",
-  DEVICE_DELETED: "device.deleted",
   ASSET_LIST_IMPORTED: "asset_list.imported",
   ASSET_LIST_CLEARED: "asset_list.cleared",
 } as const;

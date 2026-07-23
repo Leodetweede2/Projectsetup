@@ -85,10 +85,3 @@ export const roomMoveSchema = z.object({
   x: fraction,
   y: fraction,
 });
-
-export const deviceSaveSchema = z.object({
-  id: z.string().optional().or(z.literal("")),
-  roomId: z.string().min(1),
-  name: z.string().trim().min(1, "PC name is required").max(120),
-  assetTag: z.string().trim().max(120).optional().or(z.literal("")),
-});

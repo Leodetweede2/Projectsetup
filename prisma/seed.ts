@@ -80,7 +80,7 @@ async function main() {
   if (process.env.NODE_ENV !== "production" || process.env.SEED_DEMO === "true") {
     await seedDemoFloorPlan();
     await seedDemoAssetList();
-    console.log("Seeded demo floor plan (H1.001–H1.004), a sample PC, and a demo asset list.");
+    console.log("Seeded demo floor plan (H1.001–H1.004) and a demo asset list.");
   }
 }
 
@@ -152,12 +152,6 @@ async function seedDemoFloorPlan() {
       create: { ...r, floorPlanId: plan.id },
     });
   }
-
-  await prisma.device.upsert({
-    where: { id: "demo-device-1" },
-    update: { name: "AMP-PC-0421", assetTag: "ASSET-0421", roomId: "demo-room-1" },
-    create: { id: "demo-device-1", name: "AMP-PC-0421", assetTag: "ASSET-0421", roomId: "demo-room-1" },
-  });
 }
 
 main()

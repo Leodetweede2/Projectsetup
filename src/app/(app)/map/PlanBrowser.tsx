@@ -24,8 +24,7 @@ export interface SearchResult {
   roomId: string;
   number: string;
   planLabel: string;
-  matchedBy: "room" | "device" | "asset";
-  deviceName?: string;
+  matchedBy: "room" | "asset";
 }
 
 interface Props {
@@ -40,7 +39,7 @@ interface Props {
   initialRoomId: string | null;
 }
 
-const pcCount = (r: BrowseRoom) => r.devices.length + r.assets.length;
+const pcCount = (r: BrowseRoom) => r.assets.length;
 
 const LOCATION_FALLBACK = "Other";
 
@@ -164,28 +163,23 @@ export function PlanBrowser({
     setPinFilter("");
   }
 
-  // The PCs (and devices) to show for the selected room. When a PC filter is
-  // active, show only the PCs in the room that match it (falling back to all if
-  // the room matched by something other than a PC, e.g. its room number).
+  // The PCs to show for the selected room. When a PC filter is active, show only
+  // the PCs in the room that match it (falling back to all if the room matched
+  // by something other than a PC, e.g. its room number).
   const selectedPcs = useMemo(() => {
-    const empty = { assets: [], devices: [], filtered: false };
-    if (!selected) return empty as { assets: BrowseRoom["assets"]; devices: BrowseRoom["devices"]; filtered: boolean };
-    if (!pcFilterActive) return { assets: selected.assets, devices: selected.devices, filtered: false };
+    const empty = { assets: [], filtered: false };
+    if (!selected) return empty as { assets: BrowseRoom["assets"]; filtered: boolean };
+    if (!pcFilterActive) return { assets: selected.assets, filtered: false };
     const q = pinFilter.trim().toLowerCase();
     const assets = selected.assets.filter((row) => {
       if (attr && attrVal && (row[attr] ?? "").trim() !== attrVal) return false;
       if (q && !assetCols.map((c) => row[c] ?? "").join(" ").toLowerCase().includes(q)) return false;
       return true;
     });
-    const devices = selected.devices.filter((d) => {
-      if (attr && attrVal) return false; // devices carry no asset attributes
-      if (q) return `${d.name} ${d.assetTag ?? ""}`.toLowerCase().includes(q);
-      return true;
-    });
-    if (assets.length === 0 && devices.length === 0) {
-      return { assets: selected.assets, devices: selected.devices, filtered: false };
+    if (assets.length === 0) {
+      return { assets: selected.assets, filtered: false };
     }
-    return { assets, devices, filtered: true };
+    return { assets, filtered: true };
   }, [selected, pcFilterActive, attr, attrVal, pinFilter, assetCols]);
 
   // Bring the details panel into view when a room is selected by clicking a pin.
@@ -489,7 +483,6 @@ export function PlanBrowser({
                 <span className="text-ink-faint">
                   {" "}
                   — {r.planLabel}
-                  {r.matchedBy === "device" && r.deviceName ? ` · PC ${r.deviceName}` : ""}
                   {r.matchedBy === "asset" ? " · in asset list" : ""}
                 </span>
               </li>
@@ -515,7 +508,7 @@ export function PlanBrowser({
                 {pcCount(selected) > 0 ? (
                   <Badge tone="red">
                     {selectedPcs.filtered
-                      ? `${selectedPcs.assets.length + selectedPcs.devices.length} of ${pcCount(selected)} PC(s)`
+                      ? `${selectedPcs.assets.length} of ${pcCount(selected)} PC(s)`
                       : `${pcCount(selected)} PC(s)`}
                   </Badge>
                 ) : (
@@ -538,25 +531,8 @@ export function PlanBrowser({
               </p>
             )}
 
-            {selected.assets.length === 0 && selected.devices.length === 0 && (
+            {selected.assets.length === 0 && (
               <p className="mt-3 text-sm text-ink-faint">No PCs recorded for this room.</p>
-            )}
-
-            {selectedPcs.devices.length > 0 && (
-              <div className="mt-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-ink-faint">
-                  Linked devices
-                </p>
-                <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-ink-muted">
-                  {selectedPcs.devices.map((d) => (
-                    <li key={d.id} className="flex items-center gap-1">
-                      {d.name}
-                      {d.assetTag && <span className="text-ink-faint"> · {d.assetTag}</span>}
-                      <CopyButton value={d.name} label="PC name" />
-                    </li>
-                  ))}
-                </ul>
-              </div>
             )}
 
             {selectedPcs.assets.length > 0 && (

@@ -10,8 +10,7 @@ interface RoomHit {
   roomId: string;
   number: string;
   label: string;
-  matchedBy: "room" | "device" | "asset";
-  deviceName: string | null;
+  matchedBy: "room" | "asset";
 }
 
 type Item =
@@ -191,7 +190,7 @@ export function CommandPalette({ groups }: { groups: NavGroup[] }) {
                         ].join(" ")}
                       >
                         <span className="shrink-0 text-ink-faint">
-                          {item.kind === "nav" ? item.icon : item.hit.matchedBy === "device" || item.hit.matchedBy === "asset" ? <IconCpu /> : <IconMap />}
+                          {item.kind === "nav" ? item.icon : item.hit.matchedBy === "asset" ? <IconCpu /> : <IconMap />}
                         </span>
                         {item.kind === "nav" ? (
                           <span className="font-medium text-ink">{item.label}</span>
@@ -201,7 +200,6 @@ export function CommandPalette({ groups }: { groups: NavGroup[] }) {
                             <span className="text-ink-faint">
                               {" "}
                               — {item.hit.label}
-                              {item.hit.deviceName ? ` · PC ${item.hit.deviceName}` : ""}
                               {item.hit.matchedBy === "asset" ? " · in asset list" : ""}
                             </span>
                           </span>

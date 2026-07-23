@@ -6,8 +6,6 @@ import {
   updateRoomAction,
   moveRoomAction,
   deleteRoomAction,
-  saveDeviceAction,
-  deleteDeviceAction,
 } from "@/lib/maps/actions";
 import type { ActionState } from "@/lib/auth/actions";
 import { Button } from "@/components/ui/Button";
@@ -15,11 +13,6 @@ import { Input, Label, FieldError } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 
-interface DeviceDTO {
-  id: string;
-  name: string;
-  assetTag: string | null;
-}
 interface RoomDTO {
   id: string;
   number: string;
@@ -27,7 +20,6 @@ interface RoomDTO {
   department: string | null;
   x: number;
   y: number;
-  devices: DeviceDTO[];
 }
 interface Props {
   plan: { id: string; name: string };
@@ -245,59 +237,10 @@ export function PinEditor({ plan, rooms }: Props) {
               </div>
             </form>
 
-            {/* Devices */}
-            <div className="mt-4 border-t border-line pt-4">
-              <h4 className="mb-2 text-sm font-semibold text-ink-muted">PCs in this room</h4>
-              <ul className="mb-3 space-y-1">
-                {selected.devices.map((d) => (
-                  <li key={d.id} className="flex items-center justify-between text-sm">
-                    <span>
-                      {d.name}
-                      {d.assetTag && <span className="text-ink-faint"> · {d.assetTag}</span>}
-                    </span>
-                    <button
-                      type="button"
-                      className="text-red-600 hover:underline"
-                      onClick={() => {
-                        const fd = new FormData();
-                        fd.set("id", d.id);
-                        fd.set("floorPlanId", plan.id);
-                        startTransition(async () => {
-                          await deleteDeviceAction(fd);
-                        });
-                      }}
-                    >
-                      remove
-                    </button>
-                  </li>
-                ))}
-                {selected.devices.length === 0 && (
-                  <li className="text-sm text-ink-faint">No PCs linked yet.</li>
-                )}
-              </ul>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const form = e.currentTarget;
-                  const fd = new FormData(form);
-                  fd.set("roomId", selected.id);
-                  run(saveDeviceAction, fd, () => form.reset());
-                }}
-                className="flex flex-wrap items-end gap-2"
-              >
-                <div className="flex-1">
-                  <Label htmlFor="d-name">PC name</Label>
-                  <Input id="d-name" name="name" placeholder="AMP-PC-0421" required />
-                </div>
-                <div className="flex-1">
-                  <Label htmlFor="d-asset">Asset tag</Label>
-                  <Input id="d-asset" name="assetTag" placeholder="optional" />
-                </div>
-                <Button type="submit" size="sm" disabled={isPending}>
-                  Add PC
-                </Button>
-              </form>
-            </div>
+            <p className="mt-4 border-t border-line pt-4 text-xs text-ink-faint">
+              PCs are linked automatically from the imported asset list by room
+              number — there is nothing to add here by hand.
+            </p>
           </div>
         )}
 

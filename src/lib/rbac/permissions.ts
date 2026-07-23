@@ -68,6 +68,6 @@ export const PERMISSION_METADATA: Record<
   [PERMISSIONS.MAPS_WRITE]: {
     label: "Manage floor plans",
     group: "Floor plans",
-    description: "Upload floor plans and place/edit room pins and devices.",
+    description: "Upload floor plans and place/edit room pins.",
   },
 };

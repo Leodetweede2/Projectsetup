@@ -133,24 +133,8 @@ model Room {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  devices Device[]
-
   @@index([floorPlanId])
   @@index([number])
-}
-
-model Device {
-  id        String   @id @default(cuid())
-  // Hostname or label of the PC/device.
-  name      String
-  assetTag  String?
-  roomId    String?
-  room      Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([name])
-  @@index([roomId])
 }
 
 // ---------------------------------------------------------------------------

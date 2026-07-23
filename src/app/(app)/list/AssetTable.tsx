@@ -14,13 +14,24 @@ interface Props {
   roomNumberColumn: string;
   /** Start with the "PCs without a location" filter on (from the dashboard). */
   initialUnlocated?: boolean;
+  /** Per-column filters to start with (dashboard drill-down). */
+  initialFilters?: Record<string, string>;
+  /** Global search to start with (dashboard drill-down). */
+  initialQuery?: string;
 }
 
 const PAGE_SIZE = 50;
 
-export function AssetTable({ columns, rows, roomNumberColumn, initialUnlocated }: Props) {
-  const [query, setQuery] = useState("");
-  const [filters, setFilters] = useState<Record<string, string>>({});
+export function AssetTable({
+  columns,
+  rows,
+  roomNumberColumn,
+  initialUnlocated,
+  initialFilters,
+  initialQuery,
+}: Props) {
+  const [query, setQuery] = useState(initialQuery ?? "");
+  const [filters, setFilters] = useState<Record<string, string>>(initialFilters ?? {});
   const [onlyUnlocated, setOnlyUnlocated] = useState(!!initialUnlocated);
   const [sortCol, setSortCol] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");

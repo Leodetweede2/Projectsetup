@@ -127,6 +127,12 @@ export async function getPlanForBrowse(planId: string): Promise<BrowsePlan | nul
   };
 }
 
+export interface DatasetInfo {
+  filename: string;
+  importedAt: Date;
+  rowCount: number;
+}
+
 export interface DashboardData {
   stats: DashboardStats;
   department: DepartmentStats;
@@ -134,6 +140,8 @@ export interface DashboardData {
   os: BreakdownStats | null;
   activity: ActivityStats | null;
   locations: LocationStat[];
+  /** The imported asset list this dashboard is computed from, if any. */
+  dataset: DatasetInfo | null;
 }
 
 /**
@@ -148,6 +156,7 @@ export async function getDashboardData(prow?: string, pcol?: string): Promise<Da
     prisma.floorPlan.findMany({
       orderBy: [{ building: "asc" }, { floor: "asc" }, { name: "asc" }],
       select: {
+        id: true,
         name: true,
         building: true,
         floor: true,
@@ -179,6 +188,7 @@ export async function getDashboardData(prow?: string, pcol?: string): Promise<Da
   const lastSeenCol = detectColumn(columns, LASTSEEN_RE);
 
   const plansLite: PlanLite[] = planRows.map((p) => ({
+    id: p.id,
     label: planLabel(p),
     roomNorms: p.rooms.map((r) => normalizeRoomNumber(r.number)),
   }));
@@ -195,5 +205,8 @@ export async function getDashboardData(prow?: string, pcol?: string): Promise<Da
     os: osCol ? computeBreakdown(data, osCol) : null,
     activity: lastSeenCol ? computeActivity(data, lastSeenCol) : null,
     locations: computeLocations(plansLite, assetRoomNumbers),
+    dataset: imp
+      ? { filename: imp.filename, importedAt: imp.createdAt, rowCount: imp.rowCount }
+      : null,
   };
 }

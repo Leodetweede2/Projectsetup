@@ -3,12 +3,17 @@ import { requireUser } from "@/lib/auth/guards";
 import { hasPermission } from "@/lib/rbac/hasPermission";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { getDashboardData } from "@/lib/maps/browse";
+import { listDrillHref } from "@/lib/assets/listParams";
+import { formatTimeAgo, daysSince } from "@/lib/format";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { StatTile } from "@/components/ui/StatTile";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { IconCpu, IconMap, IconBuilding, IconUsers, IconFloorplan, IconList, IconClock } from "@/components/icons";
+import { IconChevronRight, IconCpu, IconMap, IconBuilding, IconUsers, IconFloorplan, IconList, IconClock, IconImport } from "@/components/icons";
 import { Pivot } from "./Pivot";
+
+/** A value is a real category (not the "unknown/empty" placeholder). */
+const isRealValue = (v: string) => !!v && !v.startsWith("—");
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +32,8 @@ export default async function DashboardPage({
   const locations = dash?.locations ?? null;
   const osStats = dash?.os ?? null;
   const activity = dash?.activity ?? null;
+  const dataset = dash?.dataset ?? null;
+  const datasetStale = dataset ? daysSince(dataset.importedAt) > 30 : false;
 
   return (
     <div className="space-y-6">
@@ -88,6 +95,24 @@ export default async function DashboardPage({
               icon={<IconList />}
             />
           )}
+          {dataset && (
+            <StatTile
+              label="Asset list"
+              value={`${dataset.rowCount} rows`}
+              sub={`${dataset.filename} · imported ${formatTimeAgo(dataset.importedAt)}`}
+              tone={datasetStale ? "amber" : "slate"}
+              icon={<IconImport />}
+              href="/list"
+            />
+          )}
+        </div>
+      )}
+
+      {datasetStale && dataset && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+          The asset list was last imported {formatTimeAgo(dataset.importedAt)}. Re-export from
+          SharePoint and re-import it under <span className="font-medium">Admin → Import list</span>{" "}
+          to keep locations accurate.
         </div>
       )}
 
@@ -102,8 +127,9 @@ export default async function DashboardPage({
                 <ul className="space-y-3">
                   {osStats.top.map((o) => {
                     const pct = osStats.total ? Math.round((o.count / osStats.total) * 100) : 0;
-                    return (
-                      <li key={o.name} className="space-y-1">
+                    const drillable = isRealValue(o.name);
+                    const bar = (
+                      <div className="space-y-1">
                         <div className="flex items-center justify-between gap-3 text-sm">
                           <span className="truncate font-medium text-ink" title={o.name}>
                             {o.name}
@@ -115,6 +141,21 @@ export default async function DashboardPage({
                         <div className="h-2 overflow-hidden rounded-full bg-surface-2">
                           <div className="h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} />
                         </div>
+                      </div>
+                    );
+                    return (
+                      <li key={o.name}>
+                        {drillable ? (
+                          <Link
+                            href={listDrillHref([{ col: osStats.column, val: o.name }])}
+                            className="-mx-2 block rounded-md px-2 py-1 transition-colors hover:bg-surface-2"
+                            title={`Show ${o.name} PCs in the asset list`}
+                          >
+                            {bar}
+                          </Link>
+                        ) : (
+                          bar
+                        )}
                       </li>
                     );
                   })}
@@ -198,9 +239,18 @@ export default async function DashboardPage({
                 </TR>
               </THead>
               <TBody>
-                {locations.map((l, i) => (
-                  <TR key={i}>
-                    <TD className="font-medium text-ink">{l.label}</TD>
+                {locations.map((l) => (
+                  <TR key={l.id}>
+                    <TD className="font-medium text-ink">
+                      <Link
+                        href={`/map?plan=${l.id}`}
+                        className="inline-flex items-center gap-1 text-brand-600 hover:underline"
+                        title={`Open ${l.label} on the map`}
+                      >
+                        {l.label}
+                        <IconChevronRight width={14} height={14} />
+                      </Link>
+                    </TD>
                     <TD className="text-right tabular-nums">{l.rooms}</TD>
                     <TD className="text-right tabular-nums">{l.pcs}</TD>
                   </TR>

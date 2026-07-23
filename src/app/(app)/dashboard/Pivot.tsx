@@ -1,11 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { listDrillHref } from "@/lib/assets/listParams";
 import type { PivotStats } from "@/lib/maps/browse";
+
+const isReal = (v: string) => !!v && !v.startsWith("—");
 
 /**
  * Interactive pivot table for the asset list. The two dimension selectors change
- * the query params, which re-renders the (server-computed) table.
+ * the query params, which re-renders the (server-computed) table. Row/column
+ * headers and cells drill through to the asset list, pre-filtered.
  */
 export function Pivot({ stats }: { stats: PivotStats }) {
   const router = useRouter();
@@ -58,7 +63,16 @@ export function Pivot({ stats }: { stats: PivotStats }) {
               </th>
               {colKeys.map((ck) => (
                 <th key={ck} className="px-3 py-2 text-right font-medium text-ink-muted" title={ck}>
-                  {ck}
+                  {isReal(ck) ? (
+                    <Link
+                      href={listDrillHref([{ col: colCol, val: ck }])}
+                      className="hover:text-brand-600 hover:underline"
+                    >
+                      {ck}
+                    </Link>
+                  ) : (
+                    ck
+                  )}
                 </th>
               ))}
               <th className="px-3 py-2 text-right font-semibold text-ink">Total</th>
@@ -72,18 +86,41 @@ export function Pivot({ stats }: { stats: PivotStats }) {
                   className="sticky left-0 z-10 max-w-56 truncate bg-surface px-3 py-1.5 text-left font-medium text-ink"
                   title={rk}
                 >
-                  {rk}
+                  {isReal(rk) ? (
+                    <Link
+                      href={listDrillHref([{ col: rowCol, val: rk }])}
+                      className="hover:text-brand-600 hover:underline"
+                    >
+                      {rk}
+                    </Link>
+                  ) : (
+                    rk
+                  )}
                 </th>
                 {colKeys.map((ck, j) => {
                   const n = counts[i][j];
                   const alpha = n > 0 ? 0.08 + 0.5 * (n / max) : 0;
+                  const drillable = n > 0 && isReal(rk) && isReal(ck);
                   return (
                     <td
                       key={ck}
-                      className="px-3 py-1.5 text-right tabular-nums text-ink"
+                      className="p-0 text-right tabular-nums text-ink"
                       style={n > 0 ? { backgroundColor: `rgba(45, 118, 170, ${alpha.toFixed(3)})` } : undefined}
                     >
-                      {n || ""}
+                      {drillable ? (
+                        <Link
+                          href={listDrillHref([
+                            { col: rowCol, val: rk },
+                            { col: colCol, val: ck },
+                          ])}
+                          className="block px-3 py-1.5 hover:underline"
+                          title={`${rk} · ${ck}: ${n} PC(s)`}
+                        >
+                          {n}
+                        </Link>
+                      ) : (
+                        <span className="block px-3 py-1.5">{n || ""}</span>
+                      )}
                     </td>
                   );
                 })}

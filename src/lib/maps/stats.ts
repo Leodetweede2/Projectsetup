@@ -240,11 +240,13 @@ export function computeActivity(
 // ---------------------------------------------------------------------------
 
 export interface LocationStat {
+  id: string;
   label: string;
   rooms: number;
   pcs: number;
 }
 export interface PlanLite {
+  id: string;
   label: string;
   /** Normalised room numbers on this plan. */
   roomNorms: string[];
@@ -266,5 +268,10 @@ export function computeLocations(
     if (idx !== undefined) pcByPlan[idx] += 1;
   }
 
-  return plans.map((p, i) => ({ label: p.label, rooms: p.roomNorms.length, pcs: pcByPlan[i] }));
+  return plans.map((p, i) => ({
+    id: p.id,
+    label: p.label,
+    rooms: p.roomNorms.length,
+    pcs: pcByPlan[i],
+  }));
 }

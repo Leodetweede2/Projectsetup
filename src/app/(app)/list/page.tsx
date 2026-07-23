@@ -1,6 +1,7 @@
 import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { getAllAssetRows } from "@/lib/assets/queries";
+import { buildInitialFilters } from "@/lib/assets/listParams";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { IconList, IconImport } from "@/components/icons";
@@ -11,12 +12,21 @@ export const dynamic = "force-dynamic";
 export default async function AssetListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ located?: string }>;
+  searchParams: Promise<{
+    located?: string;
+    q?: string;
+    col?: string;
+    val?: string;
+    col2?: string;
+    val2?: string;
+  }>;
 }) {
   await requirePermission(PERMISSIONS.MAPS_READ);
-  const { located } = await searchParams;
+  const { located, q, col, val, col2, val2 } = await searchParams;
   const initialUnlocated = located === "no";
   const { import: imp, columns, rows } = await getAllAssetRows();
+  const initialFilters = buildInitialFilters({ col, val, col2, val2 }, columns);
+  const initialQuery = q?.trim() ?? "";
 
   if (!imp) {
     return (
@@ -50,6 +60,8 @@ export default async function AssetListPage({
         rows={rows}
         roomNumberColumn={imp.roomNumberColumn}
         initialUnlocated={initialUnlocated}
+        initialFilters={initialFilters}
+        initialQuery={initialQuery}
       />
     </div>
   );

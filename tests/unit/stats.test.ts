@@ -153,12 +153,12 @@ describe("computeActivity", () => {
 describe("computeLocations", () => {
   it("counts rooms and PCs per plan, assigning each PC to the first matching plan", () => {
     const plans = [
-      { label: "Molengracht · Floor 1", roomNorms: ["H1001", "H1002"] },
-      { label: "Molengracht · Floor 2", roomNorms: ["H2001"] },
+      { id: "p1", label: "Molengracht · Floor 1", roomNorms: ["H1001", "H1002"] },
+      { id: "p2", label: "Molengracht · Floor 2", roomNorms: ["H2001"] },
     ];
     const locs = computeLocations(plans, ["H1001", "H1001", "H2001", "H9999"]);
-    expect(locs[0]).toEqual({ label: "Molengracht · Floor 1", rooms: 2, pcs: 2 });
-    expect(locs[1]).toEqual({ label: "Molengracht · Floor 2", rooms: 1, pcs: 1 });
+    expect(locs[0]).toEqual({ id: "p1", label: "Molengracht · Floor 1", rooms: 2, pcs: 2 });
+    expect(locs[1]).toEqual({ id: "p2", label: "Molengracht · Floor 2", rooms: 1, pcs: 1 });
     // H9999 matches no plan and is not counted anywhere.
   });
 });

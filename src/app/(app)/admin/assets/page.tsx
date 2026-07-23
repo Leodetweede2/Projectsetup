@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
-import { getLatestImport } from "@/lib/assets/queries";
+import { getLatestImport, getImportMatchSummary } from "@/lib/assets/queries";
 import { clearAssetListAction } from "@/lib/assets/actions";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -15,6 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminAssetsPage() {
   await requirePermission(PERMISSIONS.MAPS_WRITE);
   const current = await getLatestImport();
+  const summary = current ? await getImportMatchSummary() : null;
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -57,6 +58,65 @@ export default async function AdminAssetsPage() {
           )}
         </CardBody>
       </Card>
+
+      {summary && summary.totalRows > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Match quality</CardTitle>
+          </CardHeader>
+          <CardBody className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <div>
+                <p className="text-2xl font-bold text-ink">
+                  {summary.matchedRows}
+                  <span className="text-base font-medium text-ink-faint"> / {summary.totalRows}</span>
+                </p>
+                <p className="text-sm text-ink-faint">PCs matched to a pin</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-ink">
+                  {summary.matchedRooms}
+                  <span className="text-base font-medium text-ink-faint"> / {summary.distinctRooms}</span>
+                </p>
+                <p className="text-sm text-ink-faint">Room numbers matched</p>
+              </div>
+              <div>
+                <p
+                  className={`text-2xl font-bold ${
+                    summary.unplaced.length > 0 ? "text-amber-600 dark:text-amber-400" : "text-ink"
+                  }`}
+                >
+                  {summary.unplaced.length}
+                </p>
+                <p className="text-sm text-ink-faint">Room numbers not on a plan</p>
+              </div>
+            </div>
+
+            {summary.unplaced.length > 0 && (
+              <div>
+                <p className="mb-2 text-sm text-ink-muted">
+                  These room numbers hold PCs but aren&apos;t placed on any floor plan yet. Add
+                  them under{" "}
+                  <Link href="/admin/floorplans" className="text-brand-600 hover:underline">
+                    Floor plans
+                  </Link>
+                  .
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {summary.unplaced.slice(0, 40).map((r) => (
+                    <Badge key={r.key} tone="amber">
+                      {r.label} · {r.count}
+                    </Badge>
+                  ))}
+                  {summary.unplaced.length > 40 && (
+                    <Badge tone="gray">+{summary.unplaced.length - 40} more</Badge>
+                  )}
+                </div>
+              </div>
+            )}
+          </CardBody>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

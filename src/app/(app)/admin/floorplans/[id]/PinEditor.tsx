@@ -21,15 +21,22 @@ interface RoomDTO {
   x: number;
   y: number;
 }
+interface UnplacedRoom {
+  label: string;
+  count: number;
+}
 interface Props {
   plan: { id: string; name: string };
   rooms: RoomDTO[];
+  /** Asset-list room numbers not on any plan yet (to place quickly). */
+  unplaced: UnplacedRoom[];
 }
 
-export function PinEditor({ plan, rooms }: Props) {
+export function PinEditor({ plan, rooms, unplaced }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pending, setPending] = useState<{ x: number; y: number } | null>(null);
   const [moveMode, setMoveMode] = useState(false);
+  const [prefillNumber, setPrefillNumber] = useState<string | null>(null);
   const [state, setState] = useState<ActionState>({});
   const [isPending, startTransition] = useTransition();
 
@@ -76,7 +83,9 @@ export function PinEditor({ plan, rooms }: Props) {
         <p className="mb-2 text-sm text-ink-faint">
           {moveMode
             ? "Click the map to move the selected pin."
-            : "Click an empty spot to add a room, or click a pin to edit it."}
+            : prefillNumber
+              ? `Click the map to place room ${prefillNumber}.`
+              : "Click an empty spot to add a room, or click a pin to edit it."}
         </p>
         <div className="overflow-auto rounded-lg border border-line bg-surface-2">
           <div
@@ -148,13 +157,22 @@ export function PinEditor({ plan, rooms }: Props) {
                 fd.set("floorPlanId", plan.id);
                 fd.set("x", String(pending.x));
                 fd.set("y", String(pending.y));
-                run(createRoomAction, fd, () => setPending(null));
+                run(createRoomAction, fd, () => {
+                  setPending(null);
+                  setPrefillNumber(null);
+                });
               }}
               className="space-y-3"
             >
               <div>
                 <Label htmlFor="n-number">Room number</Label>
-                <Input id="n-number" name="number" required />
+                <Input
+                  key={prefillNumber ?? "new"}
+                  id="n-number"
+                  name="number"
+                  defaultValue={prefillNumber ?? ""}
+                  required
+                />
                 <FieldError>{state.fieldErrors?.number}</FieldError>
               </div>
               <div>
@@ -169,7 +187,15 @@ export function PinEditor({ plan, rooms }: Props) {
                 <Button type="submit" size="sm" disabled={isPending}>
                   Add room
                 </Button>
-                <Button type="button" size="sm" variant="ghost" onClick={() => setPending(null)}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setPending(null);
+                    setPrefillNumber(null);
+                  }}
+                >
                   Cancel
                 </Button>
               </div>
@@ -247,6 +273,43 @@ export function PinEditor({ plan, rooms }: Props) {
         {!pending && !selected && (
           <div className="rounded-lg border border-dashed border-line p-4 text-sm text-ink-faint">
             Select a pin to edit it, or click an empty spot on the map to add a room.
+          </div>
+        )}
+
+        {unplaced.length > 0 && (
+          <div className="rounded-lg border border-line bg-surface p-4">
+            <h3 className="text-sm font-semibold text-ink">Unplaced from the asset list</h3>
+            <p className="mt-0.5 text-xs text-ink-faint">
+              {unplaced.length} room number{unplaced.length === 1 ? "" : "s"} with PCs aren&apos;t
+              on any plan. Click one, then click the map to place it.
+            </p>
+            <div className="mt-3 flex max-h-56 flex-wrap gap-1.5 overflow-auto">
+              {unplaced.map((r) => {
+                const active = prefillNumber === r.label;
+                return (
+                  <button
+                    key={r.label}
+                    type="button"
+                    onClick={() => {
+                      setSelectedId(null);
+                      setPending(null);
+                      setMoveMode(false);
+                      setState({});
+                      setPrefillNumber(active ? null : r.label);
+                    }}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                      active
+                        ? "border-brand-500 bg-brand-500 text-white"
+                        : "border-amber-300 bg-amber-50 text-amber-700 hover:border-amber-400 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
+                    }`}
+                    title={`${r.count} PC${r.count === 1 ? "" : "s"} in ${r.label}`}
+                  >
+                    {r.label}
+                    <span className={active ? "text-white/80" : "text-amber-500/80"}>· {r.count}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

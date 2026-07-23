@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { normalizeRoomNumber } from "@/lib/maps/search";
+import { computeUnmappedRooms, type UnmappedRoom } from "@/lib/maps/stats";
 
 export async function getLatestImport() {
   return prisma.assetImport.findFirst({ orderBy: { createdAt: "desc" } });
@@ -81,6 +82,59 @@ export async function getAllAssetRows(cap = 10000) {
     roomId: linkMap.get(r.roomNumber) ?? null,
   }));
   return { import: imp, columns: imp.columns, rows };
+}
+
+export interface ImportMatchSummary {
+  totalRows: number;
+  matchedRows: number;
+  unmatchedRows: number;
+  distinctRooms: number;
+  matchedRooms: number;
+  /** Room numbers present in the list but not on any plan, biggest first. */
+  unplaced: UnmappedRoom[];
+}
+
+/**
+ * How well the latest import lines up with the placed floor-plan pins: how many
+ * rows/room numbers match a pin, and which room numbers are still unplaced.
+ */
+export async function getImportMatchSummary(): Promise<ImportMatchSummary | null> {
+  const imp = await getLatestImport();
+  if (!imp) return null;
+
+  const [records, rooms] = await Promise.all([
+    prisma.assetRecord.findMany({
+      where: { importId: imp.id },
+      select: { roomNumber: true, data: true },
+    }),
+    prisma.room.findMany({ select: { number: true } }),
+  ]);
+
+  const roomNorms = new Set(rooms.map((r) => normalizeRoomNumber(r.number)));
+  const recLite = records.map((r) => ({
+    roomNumber: r.roomNumber,
+    data: r.data as Record<string, string>,
+  }));
+
+  const distinct = new Set<string>();
+  const matchedDistinct = new Set<string>();
+  let matchedRows = 0;
+  for (const r of recLite) {
+    distinct.add(r.roomNumber);
+    if (roomNorms.has(r.roomNumber)) {
+      matchedRows += 1;
+      matchedDistinct.add(r.roomNumber);
+    }
+  }
+
+  return {
+    totalRows: recLite.length,
+    matchedRows,
+    unmatchedRows: recLite.length - matchedRows,
+    distinctRooms: distinct.size,
+    matchedRooms: matchedDistinct.size,
+    unplaced: computeUnmappedRooms(recLite, roomNorms, imp.roomNumberColumn, 200),
+  };
 }
 
 /** Excel rows whose room number matches a given room, for the map viewer. */

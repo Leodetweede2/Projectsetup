@@ -1,13 +1,14 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-type Tone = "gray" | "green" | "red" | "blue";
+type Tone = "gray" | "green" | "red" | "blue" | "amber";
 
 const tones: Record<Tone, string> = {
   gray: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
   green: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300",
   red: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300",
   blue: "bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300",
+  amber: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
 };
 
 export function Badge({ tone = "gray", children }: { tone?: Tone; children: ReactNode }) {

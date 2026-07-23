@@ -6,6 +6,11 @@ import { prisma } from "@/lib/db";
 import { sendMailBestEffort } from "@/lib/mail";
 import { AUDIT_ACTIONS, logAudit } from "@/lib/audit";
 import { forgotPasswordSchema, loginSchema, resetPasswordSchema } from "@/lib/validation";
+import {
+  loginRateLimiter,
+  passwordResetRateLimiter,
+  formatRetryAfter,
+} from "@/lib/rate-limit";
 import { hashPassword, verifyPassword } from "./password";
 import { createSession, destroyOtherSessions } from "./session";
 import { generateToken, hashToken } from "./tokens";
@@ -118,6 +123,21 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
   if (!parsed.success) return { fieldErrors: fieldErrorsFrom(parsed.error) };
 
   const { email, password } = parsed.data;
+
+  // Throttle repeated attempts per account. Keying by email (not IP) avoids
+  // locking out an entire site that shares one NAT egress address.
+  const rlKey = email.toLowerCase();
+  const limit = loginRateLimiter.check(rlKey);
+  if (!limit.allowed) {
+    await logAudit({
+      action: AUDIT_ACTIONS.LOGIN_FAILED,
+      metadata: { email, reason: "rate_limited" },
+    });
+    return {
+      error: `Too many sign-in attempts. Try again in ${formatRetryAfter(limit.retryAfterMs)}.`,
+    };
+  }
+
   const user = await prisma.user.findUnique({ where: { email } });
 
   const invalid: ActionState = { error: "Invalid email or password." };
@@ -141,6 +161,7 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
     return { error: "Please verify your email address before signing in." };
   }
 
+  loginRateLimiter.reset(rlKey);
   await createSession(user.id);
   await logAudit({ action: AUDIT_ACTIONS.LOGIN_SUCCESS, actorUserId: user.id });
 
@@ -158,9 +179,19 @@ export async function forgotPasswordAction(
   if (!parsed.success) return { fieldErrors: fieldErrorsFrom(parsed.error) };
 
   const { email } = parsed.data;
+
+  // Always respond the same way to avoid leaking which emails are registered,
+  // including when throttled — so the limiter can't be used to probe accounts.
+  const sameResponse: ActionState = {
+    success: "If an account exists for that email, a password reset link has been sent.",
+  };
+
+  if (!passwordResetRateLimiter.check(email.toLowerCase()).allowed) {
+    return sameResponse;
+  }
+
   const user = await prisma.user.findUnique({ where: { email } });
 
-  // Always respond the same way to avoid leaking which emails are registered.
   if (user) {
     const token = await issueVerificationToken(email, "PASSWORD_RESET");
     const link = `${await appUrl()}/reset-password?token=${token}`;
@@ -176,9 +207,7 @@ export async function forgotPasswordAction(
     });
   }
 
-  return {
-    success: "If an account exists for that email, a password reset link has been sent.",
-  };
+  return sameResponse;
 }
 
 // ---------------------------------------------------------------------------

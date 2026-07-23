@@ -93,8 +93,43 @@ export function PlanBrowser({
     }
   }, [initialRoomId]);
 
-  const selected = rooms.find((r) => r.id === selectedId) ?? null;
+  // O(1) room lookup by id (instead of scanning `rooms` on every render).
+  const roomById = useMemo(() => new Map(rooms.map((r) => [r.id, r])), [rooms]);
+  const selected = selectedId ? roomById.get(selectedId) ?? null : null;
   const imageUrl = `/api/floorplans/${planId}/image`;
+
+  // Inventory summary for the current plan (how many PCs / rooms are here).
+  const planTotals = useMemo(() => {
+    let pcs = 0;
+    let roomsWithPcs = 0;
+    for (const r of rooms) {
+      const c = r.assets.length;
+      pcs += c;
+      if (c > 0) roomsWithPcs += 1;
+    }
+    return { pcs, roomsWithPcs };
+  }, [rooms]);
+
+  // Absolute origin for building a shareable room link (client-only).
+  const [origin, setOrigin] = useState("");
+  useEffect(() => setOrigin(window.location.origin), []);
+
+  // Escape clears the selected room.
+  useEffect(() => {
+    if (!selectedId) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setSelectedId(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedId]);
+
+  /** Re-centre and zoom the plan onto the currently selected pin. */
+  function centerOnSelected() {
+    if (!selectedId) return;
+    const el = document.getElementById(`pin-${selectedId}`);
+    if (el && transformRef.current) transformRef.current.zoomToElement(el, 3, 400);
+  }
 
   const assetCols = useMemo(
     () => assetColumns.filter((c) => c !== assetRoomColumn),
@@ -363,6 +398,11 @@ export function PlanBrowser({
                 Clear filters
               </Button>
             )}
+            <span className="ml-auto text-sm text-ink-faint">
+              <span className="font-semibold text-ink">{planTotals.pcs}</span> PCs in{" "}
+              <span className="font-semibold text-ink">{planTotals.roomsWithPcs}</span> rooms on this
+              plan
+            </span>
           </div>
         </div>
 
@@ -445,9 +485,12 @@ export function PlanBrowser({
                             {room.number}
                           </span>
                         )}
+                        {isSel && (
+                          <span className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 animate-ping rounded-full bg-brand-500/60" />
+                        )}
                         <span
                           className={[
-                            "block rounded-full border-2 border-white",
+                            "relative block rounded-full border-2 border-white",
                             isSel ? "h-4 w-4 ring-2 ring-brand-500" : "h-3 w-3",
                             hasPcs ? "bg-red-600" : "bg-slate-400",
                           ].join(" ")}
@@ -464,8 +507,16 @@ export function PlanBrowser({
                 <span className="flex items-center gap-1">
                   <span className="inline-block h-2.5 w-2.5 rounded-full bg-slate-400" /> no PCs
                 </span>
-                <span>· click a pin for details, scroll to zoom, drag to pan</span>
+                <span>· click a pin for details, scroll to zoom, drag to pan, Esc to close</span>
               </p>
+              {shownRooms.length === 0 && filtersActive && (
+                <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-ink-muted">
+                  No rooms on this plan match these filters.
+                  <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+                    Clear filters
+                  </Button>
+                </p>
+              )}
             </div>
           )}
         </TransformWrapper>
@@ -514,6 +565,16 @@ export function PlanBrowser({
                 ) : (
                   <Badge tone="gray">no PCs</Badge>
                 )}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={centerOnSelected}
+                  title="Zoom the plan to this room"
+                >
+                  Center on map
+                </Button>
+                <CopyButton value={`${origin}/map?room=${selected.id}`} label="Room link" />
                 <Button
                   type="button"
                   variant="ghost"

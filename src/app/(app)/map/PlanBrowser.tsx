@@ -11,6 +11,14 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { CopyButton } from "@/components/ui/CopyButton";
+import {
+  IconSearch,
+  IconPlus,
+  IconMinus,
+  IconReset,
+  IconMaximize,
+  IconMinimize,
+} from "@/components/icons";
 import type { BrowseRoom } from "@/lib/maps/browse";
 
 interface PlanOption {
@@ -73,6 +81,25 @@ export function PlanBrowser({
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
   const detailsRef = useRef<HTMLDivElement | null>(null);
   const pinsRef = useRef<HTMLDivElement | null>(null);
+  const mapBoxRef = useRef<HTMLDivElement | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Keep local state in sync with the browser fullscreen state.
+  useEffect(() => {
+    function onChange() {
+      setIsFullscreen(document.fullscreenElement === mapBoxRef.current);
+    }
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else {
+      mapBoxRef.current?.requestFullscreen().catch(() => {});
+    }
+  }
 
   // Keep the pins a constant on-screen size by counter-scaling them against the
   // current zoom (so the dots get smaller relative to the plan as you zoom in).
@@ -97,6 +124,10 @@ export function PlanBrowser({
   const roomById = useMemo(() => new Map(rooms.map((r) => [r.id, r])), [rooms]);
   const selected = selectedId ? roomById.get(selectedId) ?? null : null;
   const imageUrl = `/api/floorplans/${planId}/image`;
+
+  // Shared style for the floating map control buttons.
+  const ctrlBtn =
+    "flex h-9 w-9 items-center justify-center text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-300";
 
   // Inventory summary for the current plan (how many PCs / rooms are here).
   const planTotals = useMemo(() => {
@@ -270,12 +301,17 @@ export function PlanBrowser({
           {/* Cross-plan search. */}
           <div className="p-3">
             <form method="get" action="/map" className="flex items-center gap-2">
-              <input
-                name="q"
-                defaultValue={query}
-                placeholder="Search a room number or PC across all plans…"
-                className="h-10 w-full max-w-md rounded-md border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-faint focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
-              />
+              <div className="relative w-full max-w-md">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint">
+                  <IconSearch width={16} height={16} />
+                </span>
+                <input
+                  name="q"
+                  defaultValue={query}
+                  placeholder="Search a room number or PC across all plans…"
+                  className="h-10 w-full rounded-md border border-line bg-surface pl-9 pr-3 text-sm text-ink placeholder:text-ink-faint focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+                />
+              </div>
               <Button type="submit" size="sm">
                 Search
               </Button>
@@ -424,25 +460,14 @@ export function PlanBrowser({
           onTransform={(_ref, state) => setMapScale(state.scale)}
         >
           {({ zoomIn, zoomOut, resetTransform }) => (
-            <div>
-              <div className="mb-2 flex gap-2">
-                <Button type="button" size="sm" variant="secondary" onClick={() => zoomIn()}>
-                  Zoom in
-                </Button>
-                <Button type="button" size="sm" variant="secondary" onClick={() => zoomOut()}>
-                  Zoom out
-                </Button>
-                <Button type="button" size="sm" variant="ghost" onClick={() => resetTransform()}>
-                  Reset
-                </Button>
-              </div>
+            <div
+              ref={mapBoxRef}
+              className="relative overflow-hidden rounded-lg border border-line bg-surface-2"
+            >
               <TransformComponent
                 wrapperStyle={{
                   width: "100%",
-                  height: "72vh",
-                  background: "rgb(var(--surface-2))",
-                  borderRadius: "0.5rem",
-                  border: "1px solid rgb(var(--line))",
+                  height: isFullscreen ? "100vh" : "72vh",
                   cursor: "grab",
                 }}
                 contentClass="!w-full"
@@ -500,26 +525,65 @@ export function PlanBrowser({
                   })}
                 </div>
               </TransformComponent>
-              <p className="mt-2 flex flex-wrap items-center gap-3 text-xs text-ink-faint">
-                <span className="flex items-center gap-1">
+
+              {/* Floating map controls (Google-Maps style overlay). */}
+              <div className="absolute right-3 top-3 z-30 flex flex-col overflow-hidden rounded-lg border border-line bg-surface/90 shadow-lifted backdrop-blur">
+                <button type="button" onClick={() => zoomIn()} aria-label="Zoom in" className={ctrlBtn}>
+                  <IconPlus width={18} height={18} />
+                </button>
+                <span className="h-px bg-line" />
+                <button type="button" onClick={() => zoomOut()} aria-label="Zoom out" className={ctrlBtn}>
+                  <IconMinus width={18} height={18} />
+                </button>
+                <span className="h-px bg-line" />
+                <button
+                  type="button"
+                  onClick={() => resetTransform()}
+                  aria-label="Reset view"
+                  className={ctrlBtn}
+                >
+                  <IconReset width={17} height={17} />
+                </button>
+                <span className="h-px bg-line" />
+                <button
+                  type="button"
+                  onClick={toggleFullscreen}
+                  aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                  className={ctrlBtn}
+                >
+                  {isFullscreen ? (
+                    <IconMinimize width={17} height={17} />
+                  ) : (
+                    <IconMaximize width={17} height={17} />
+                  )}
+                </button>
+              </div>
+
+              {/* Legend pill (bottom-left overlay). */}
+              <div className="absolute bottom-3 left-3 z-30 flex items-center gap-3 rounded-full border border-line bg-surface/90 px-3 py-1.5 text-xs text-ink-muted shadow-elevated backdrop-blur">
+                <span className="flex items-center gap-1.5">
                   <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-600" /> has PCs
                 </span>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1.5">
                   <span className="inline-block h-2.5 w-2.5 rounded-full bg-slate-400" /> no PCs
                 </span>
-                <span>· click a pin for details, scroll to zoom, drag to pan, Esc to close</span>
-              </p>
+              </div>
+
+              {/* No-results overlay (top-centre). */}
               {shownRooms.length === 0 && filtersActive && (
-                <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-ink-muted">
-                  No rooms on this plan match these filters.
+                <div className="absolute inset-x-0 top-3 z-30 mx-auto flex w-fit items-center gap-2 rounded-full border border-line bg-surface/95 px-4 py-2 text-sm text-ink-muted shadow-lifted backdrop-blur">
+                  No rooms match these filters.
                   <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
                     Clear filters
                   </Button>
-                </p>
+                </div>
               )}
             </div>
           )}
         </TransformWrapper>
+        <p className="text-xs text-ink-faint">
+          Click a pin for details · scroll to zoom · drag to pan · Esc to close
+        </p>
       </div>
 
       {query && searchResults.length > 1 && (

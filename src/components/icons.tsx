@@ -103,6 +103,32 @@ export const IconMenu = (p: P) => (
     <path d="M4 6h16M4 12h16M4 18h16" />
   </I>
 );
+export const IconPlus = (p: P) => (
+  <I {...p}>
+    <path d="M12 5v14M5 12h14" />
+  </I>
+);
+export const IconMinus = (p: P) => (
+  <I {...p}>
+    <path d="M5 12h14" />
+  </I>
+);
+export const IconReset = (p: P) => (
+  <I {...p}>
+    <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+    <path d="M3 3v5h5" />
+  </I>
+);
+export const IconMaximize = (p: P) => (
+  <I {...p}>
+    <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+  </I>
+);
+export const IconMinimize = (p: P) => (
+  <I {...p}>
+    <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+  </I>
+);
 export const IconBuilding = (p: P) => (
   <I {...p}>
     <rect x="4" y="3" width="16" height="18" rx="1" />

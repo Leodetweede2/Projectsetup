@@ -47,7 +47,7 @@ export async function updateProfileAction(
     actorUserId: user.id,
     targetId: user.id,
   });
-  revalidatePath("/profile");
+  revalidatePath("/account");
   return { success: "Profile updated." };
 }
 

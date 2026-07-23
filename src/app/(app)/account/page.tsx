@@ -2,8 +2,8 @@ import { requireUser } from "@/lib/auth/guards";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { IconAccount } from "@/components/icons";
-import { ProfileForm } from "../profile/ProfileForm";
-import { ChangePasswordForm } from "../settings/ChangePasswordForm";
+import { ProfileForm } from "./ProfileForm";
+import { ChangePasswordForm } from "./ChangePasswordForm";
 
 export default async function AccountPage() {
   const user = await requireUser();

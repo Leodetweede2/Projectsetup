@@ -5,6 +5,8 @@ import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { IconAudit } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -33,10 +35,11 @@ export default async function AuditLogPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-ink">Audit log</h1>
-        <p className="mt-1 text-sm text-ink-faint">{total} recorded events.</p>
-      </div>
+      <PageHeader
+        title="Audit log"
+        icon={<IconAudit />}
+        description={`${total} recorded events.`}
+      />
 
       <Card>
         <CardHeader>

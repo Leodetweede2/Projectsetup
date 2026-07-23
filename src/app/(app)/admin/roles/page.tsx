@@ -4,6 +4,8 @@ import { hasPermission } from "@/lib/rbac/hasPermission";
 import { PERMISSIONS, PERMISSION_METADATA } from "@/lib/rbac/permissions";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { IconRoles } from "@/components/icons";
 import { RolePermissionsForm } from "./RolePermissionsForm";
 
 export const dynamic = "force-dynamic";
@@ -22,14 +24,15 @@ export default async function AdminRolesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-ink">Roles &amp; permissions</h1>
-        <p className="mt-1 text-sm text-ink-faint">
-          {canWrite
+      <PageHeader
+        title="Roles & permissions"
+        icon={<IconRoles />}
+        description={
+          canWrite
             ? "Toggle the permissions granted by each role."
-            : "You have read-only access to roles."}
-        </p>
-      </div>
+            : "You have read-only access to roles."
+        }
+      />
 
       {roles.map((role) => (
         <Card key={role.id} data-testid={`role-card-${role.name}`}>

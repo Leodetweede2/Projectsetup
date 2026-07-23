@@ -7,6 +7,7 @@ import { MobileNav } from "@/components/MobileNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AmphiaLogo } from "@/components/AmphiaLogo";
 import { CommandPalette } from "@/components/CommandPalette";
+import { ToastProvider } from "@/components/ui/Toast";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
@@ -70,7 +71,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <AppNav groups={nav} />
           </div>
         </aside>
-        <main className="min-w-0 flex-1">{children}</main>
+        <main className="min-w-0 flex-1">
+          <ToastProvider>{children}</ToastProvider>
+        </main>
       </div>
     </div>
   );

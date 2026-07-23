@@ -9,6 +9,8 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { IconFloorplan } from "@/components/icons";
 import { UploadFloorPlan } from "./UploadFloorPlan";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +28,11 @@ export default async function FloorPlansPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-ink">Floor plans</h1>
+      <PageHeader
+        title="Floor plans"
+        icon={<IconFloorplan />}
+        description="Upload plans and place room pins."
+      />
 
       <Card>
         <CardHeader>

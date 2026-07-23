@@ -9,6 +9,8 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { IconUsers } from "@/components/icons";
 import { CreateUserForm } from "./CreateUserForm";
 import { DeleteUserButton } from "./DeleteUserButton";
 
@@ -54,7 +56,11 @@ export default async function AdminUsersPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-ink">Users</h1>
+      <PageHeader
+        title="Users"
+        icon={<IconUsers />}
+        description="Manage accounts, roles, and access."
+      />
 
       {canWrite && (
         <Card>

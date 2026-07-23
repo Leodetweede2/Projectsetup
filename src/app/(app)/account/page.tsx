@@ -1,5 +1,7 @@
 import { requireUser } from "@/lib/auth/guards";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { IconAccount } from "@/components/icons";
 import { ProfileForm } from "../profile/ProfileForm";
 import { ChangePasswordForm } from "../settings/ChangePasswordForm";
 
@@ -8,7 +10,11 @@ export default async function AccountPage() {
 
   return (
     <div className="max-w-xl space-y-6">
-      <h1 className="text-2xl font-bold text-ink">Account</h1>
+      <PageHeader
+        title="Account"
+        icon={<IconAccount />}
+        description="Update your details and password."
+      />
 
       <Card>
         <CardHeader>

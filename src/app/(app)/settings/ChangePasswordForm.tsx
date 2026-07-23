@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useActionToast } from "@/components/ui/Toast";
 import { changePasswordAction } from "@/lib/user/actions";
 import type { ActionState } from "@/lib/auth/actions";
 import { Alert } from "@/components/ui/Alert";
@@ -11,6 +12,7 @@ const initial: ActionState = {};
 
 export function ChangePasswordForm() {
   const [state, formAction] = useActionState(changePasswordAction, initial);
+  useActionToast(state);
 
   return (
     <form action={formAction} className="space-y-4" noValidate>

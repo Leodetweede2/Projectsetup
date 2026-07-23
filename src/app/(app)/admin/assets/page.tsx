@@ -6,6 +6,8 @@ import { clearAssetListAction } from "@/lib/assets/actions";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { IconImport } from "@/components/icons";
 import { ImportAssetList } from "./ImportAssetList";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +18,11 @@ export default async function AdminAssetsPage() {
 
   return (
     <div className="max-w-4xl space-y-6">
-      <h1 className="text-2xl font-bold text-ink">Asset list (Excel import)</h1>
+      <PageHeader
+        title="Asset list (Excel import)"
+        icon={<IconImport />}
+        description="Import the SharePoint export that links PCs to rooms."
+      />
 
       <Card>
         <CardHeader>

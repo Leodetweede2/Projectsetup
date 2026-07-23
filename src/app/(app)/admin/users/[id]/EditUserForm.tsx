@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useActionToast } from "@/components/ui/Toast";
 import { updateUserAction } from "@/lib/admin/actions";
 import type { ActionState } from "@/lib/auth/actions";
 import { Alert } from "@/components/ui/Alert";
@@ -17,6 +18,7 @@ interface Props {
 
 export function EditUserForm({ user, roles, assignedRoleIds }: Props) {
   const [state, formAction] = useActionState(updateUserAction, initial);
+  useActionToast(state);
 
   return (
     <form action={formAction} className="space-y-4" noValidate>

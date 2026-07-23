@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useActionToast } from "@/components/ui/Toast";
 import { updateProfileAction } from "@/lib/user/actions";
 import type { ActionState } from "@/lib/auth/actions";
 import { Alert } from "@/components/ui/Alert";
@@ -11,6 +12,7 @@ const initial: ActionState = {};
 
 export function ProfileForm({ name, email }: { name: string; email: string }) {
   const [state, formAction] = useActionState(updateProfileAction, initial);
+  useActionToast(state);
 
   return (
     <form action={formAction} className="space-y-4" noValidate>

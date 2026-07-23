@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useActionToast } from "@/components/ui/Toast";
 import { updateRolePermissionsAction } from "@/lib/admin/actions";
 import type { ActionState } from "@/lib/auth/actions";
 import { Alert } from "@/components/ui/Alert";
@@ -24,6 +25,7 @@ interface Props {
 
 export function RolePermissionsForm({ role, permissions, granted, canWrite }: Props) {
   const [state, formAction] = useActionState(updateRolePermissionsAction, initial);
+  useActionToast(state);
 
   const groups = Array.from(new Set(permissions.map((p) => p.group)));
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useActionToast } from "@/components/ui/Toast";
 import { createUserAction } from "@/lib/admin/actions";
 import type { ActionState } from "@/lib/auth/actions";
 import { Alert } from "@/components/ui/Alert";
@@ -11,6 +12,7 @@ const initial: ActionState = {};
 
 export function CreateUserForm({ roles }: { roles: { id: string; name: string }[] }) {
   const [state, formAction] = useActionState(createUserAction, initial);
+  useActionToast(state);
 
   return (
     <form action={formAction} className="space-y-4" noValidate>

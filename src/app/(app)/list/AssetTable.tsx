@@ -7,17 +7,27 @@ import { IconDownload } from "@/components/icons";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { filterSortRows, type AssetTableRow, type SortDir } from "@/lib/assets/table";
 import { toCsv } from "@/lib/assets/csv";
+import {
+  activityBucket,
+  ACTIVITY_BUCKETS,
+  ACTIVITY_LABELS,
+  type ActivityBucket,
+} from "@/lib/assets/activity";
 
 interface Props {
   columns: string[];
   rows: AssetTableRow[];
   roomNumberColumn: string;
+  /** The "last seen" date column, if the import has one (enables activity filter). */
+  lastSeenColumn?: string | null;
   /** Start with the "PCs without a location" filter on (from the dashboard). */
   initialUnlocated?: boolean;
   /** Per-column filters to start with (dashboard drill-down). */
   initialFilters?: Record<string, string>;
   /** Global search to start with (dashboard drill-down). */
   initialQuery?: string;
+  /** Start filtered to a "last seen" activity bucket (dashboard drill-down). */
+  initialActivity?: ActivityBucket | null;
 }
 
 const PAGE_SIZE = 50;
@@ -26,21 +36,27 @@ export function AssetTable({
   columns,
   rows,
   roomNumberColumn,
+  lastSeenColumn,
   initialUnlocated,
   initialFilters,
   initialQuery,
+  initialActivity,
 }: Props) {
   const [query, setQuery] = useState(initialQuery ?? "");
   const [filters, setFilters] = useState<Record<string, string>>(initialFilters ?? {});
   const [onlyUnlocated, setOnlyUnlocated] = useState(!!initialUnlocated);
+  const [activity, setActivity] = useState<ActivityBucket | "">(initialActivity ?? "");
   const [sortCol, setSortCol] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [page, setPage] = useState(0);
 
   const processed = useMemo(() => {
-    const base = onlyUnlocated ? rows.filter((r) => !r.roomId) : rows;
+    let base = onlyUnlocated ? rows.filter((r) => !r.roomId) : rows;
+    if (activity && lastSeenColumn) {
+      base = base.filter((r) => activityBucket(r.data[lastSeenColumn]) === activity);
+    }
     return filterSortRows(base, columns, { query, filters, sortCol, sortDir });
-  }, [rows, columns, query, filters, sortCol, sortDir, onlyUnlocated]);
+  }, [rows, columns, query, filters, sortCol, sortDir, onlyUnlocated, activity, lastSeenColumn]);
 
   const pageCount = Math.max(1, Math.ceil(processed.length / PAGE_SIZE));
   const current = Math.min(page, pageCount - 1);
@@ -64,7 +80,10 @@ export function AssetTable({
   }
 
   const activeFilters =
-    Object.values(filters).some((v) => v.trim()) || query.trim().length > 0 || onlyUnlocated;
+    Object.values(filters).some((v) => v.trim()) ||
+    query.trim().length > 0 ||
+    onlyUnlocated ||
+    activity !== "";
 
   function exportCsv() {
     const headers = [...columns, "Located"];
@@ -106,6 +125,26 @@ export function AssetTable({
           />
           Only PCs without a location
         </label>
+        {lastSeenColumn && (
+          <label className="flex items-center gap-2 text-sm text-ink-muted">
+            Last seen
+            <select
+              value={activity}
+              onChange={(e) => {
+                setActivity(e.target.value as ActivityBucket | "");
+                setPage(0);
+              }}
+              className="h-9 rounded-md border border-line bg-surface px-2 text-sm text-ink focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+            >
+              <option value="">All</option>
+              {ACTIVITY_BUCKETS.map((b) => (
+                <option key={b} value={b}>
+                  {ACTIVITY_LABELS[b]}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         {activeFilters && (
           <Button
             type="button"
@@ -115,6 +154,7 @@ export function AssetTable({
               setQuery("");
               setFilters({});
               setOnlyUnlocated(false);
+              setActivity("");
               setPage(0);
             }}
           >

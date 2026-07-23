@@ -7,6 +7,7 @@
  */
 
 import { normalizeRoomNumber } from "./search";
+import { activityBucket } from "@/lib/assets/activity";
 
 export type AssetData = Record<string, string>;
 export interface AssetRecordLite {
@@ -217,22 +218,24 @@ export function computeActivity(
   column: string,
   now = Date.now(),
 ): ActivityStats {
-  const DAY = 86_400_000;
   let active = 0;
   let recent = 0;
   let stale = 0;
   let unknown = 0;
   for (const d of data) {
-    const v = (d[column] ?? "").trim();
-    const t = v ? Date.parse(v) : NaN;
-    if (Number.isNaN(t)) {
-      unknown += 1;
-      continue;
+    switch (activityBucket(d[column], now)) {
+      case "active":
+        active += 1;
+        break;
+      case "recent":
+        recent += 1;
+        break;
+      case "stale":
+        stale += 1;
+        break;
+      default:
+        unknown += 1;
     }
-    const days = (now - t) / DAY;
-    if (days <= 30) active += 1;
-    else if (days <= 90) recent += 1;
-    else stale += 1;
   }
   return { column, active, recent, stale, unknown, total: data.length };
 }
@@ -274,4 +277,80 @@ export function computeLocations(
     rooms: p.roomNorms.length,
     pcs: pcByPlan[i],
   }));
+}
+
+// ---------------------------------------------------------------------------
+// Coverage gaps — where are the devices we can't locate yet?
+// ---------------------------------------------------------------------------
+
+export interface DeptCoverage {
+  name: string;
+  total: number;
+  located: number;
+  unplaced: number;
+}
+export interface DepartmentCoverage {
+  column: string | null;
+  rows: DeptCoverage[];
+}
+
+/**
+ * Per-department PC totals with how many are placed vs. still unplaced, ranked
+ * by the number of unplaced PCs (the biggest coverage gaps first).
+ */
+export function computeDepartmentCoverage(
+  records: AssetRecordLite[],
+  column: string | null,
+  roomNorms: Set<string>,
+  topN = 20,
+): DepartmentCoverage {
+  if (!column) return { column: null, rows: [] };
+  const map = new Map<string, DeptCoverage>();
+  for (const r of records) {
+    const name = (r.data[column] ?? "").trim() || "— (unknown)";
+    const e = map.get(name) ?? { name, total: 0, located: 0, unplaced: 0 };
+    e.total += 1;
+    if (roomNorms.has(r.roomNumber)) e.located += 1;
+    else e.unplaced += 1;
+    map.set(name, e);
+  }
+  const rows = [...map.values()]
+    .sort((a, b) => b.unplaced - a.unplaced || b.total - a.total)
+    .slice(0, topN);
+  return { column, rows };
+}
+
+export interface UnmappedRoom {
+  /** Normalised key (may be "" for rows without a room number). */
+  key: string;
+  /** Human-friendly room number to show (original value, or a placeholder). */
+  label: string;
+  count: number;
+}
+
+/**
+ * Room numbers present in the asset list that don't match any floor-plan pin,
+ * with how many PCs sit behind each — the actionable "map these next" list.
+ * Rows with no room number at all are grouped under a single placeholder.
+ */
+export function computeUnmappedRooms(
+  records: AssetRecordLite[],
+  roomNorms: Set<string>,
+  roomNumberColumn: string | null,
+  topN = 12,
+): UnmappedRoom[] {
+  const map = new Map<string, { label: string; count: number }>();
+  for (const r of records) {
+    if (roomNorms.has(r.roomNumber)) continue; // already placed
+    const key = r.roomNumber;
+    const raw = roomNumberColumn ? (r.data[roomNumberColumn] ?? "").trim() : "";
+    const label = raw || (key ? key : "(no room number)");
+    const e = map.get(key) ?? { label, count: 0 };
+    e.count += 1;
+    map.set(key, e);
+  }
+  return [...map.entries()]
+    .map(([key, v]) => ({ key, label: v.label, count: v.count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, topN);
 }

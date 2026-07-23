@@ -6,8 +6,10 @@ import {
   computeBreakdown,
   computeCore,
   computeDepartment,
+  computeDepartmentCoverage,
   computeLocations,
   computePivot,
+  computeUnmappedRooms,
   detectColumn,
   DEPARTMENT_RE,
   LASTSEEN_RE,
@@ -16,10 +18,12 @@ import {
   type AssetRecordLite,
   type BreakdownStats,
   type DashboardStats,
+  type DepartmentCoverage,
   type DepartmentStats,
   type LocationStat,
   type PivotStats,
   type PlanLite,
+  type UnmappedRoom,
 } from "./stats";
 
 // Re-export the stats types so existing imports from "@/lib/maps/browse" keep working.
@@ -30,8 +34,11 @@ export type {
   DashboardStats,
   DepartmentStat,
   DepartmentStats,
+  DeptCoverage,
+  DepartmentCoverage,
   LocationStat,
   PivotStats,
+  UnmappedRoom,
 } from "./stats";
 
 /** All floor plans for the plan switcher. */
@@ -136,10 +143,14 @@ export interface DatasetInfo {
 export interface DashboardData {
   stats: DashboardStats;
   department: DepartmentStats;
+  departmentCoverage: DepartmentCoverage;
+  unmappedRooms: UnmappedRoom[];
   pivot: PivotStats | null;
   os: BreakdownStats | null;
   activity: ActivityStats | null;
   locations: LocationStat[];
+  /** The column that holds the room number (for drill-down links). */
+  roomNumberColumn: string | null;
   /** The imported asset list this dashboard is computed from, if any. */
   dataset: DatasetInfo | null;
 }
@@ -201,10 +212,13 @@ export async function getDashboardData(prow?: string, pcol?: string): Promise<Da
       assetRoomNumbers,
     }),
     department: computeDepartment(recLite, deptCol, roomNorms),
+    departmentCoverage: computeDepartmentCoverage(recLite, deptCol, roomNorms),
+    unmappedRooms: computeUnmappedRooms(recLite, roomNorms, imp?.roomNumberColumn ?? null),
     pivot: imp ? computePivot(data, available, prow, pcol) : null,
     os: osCol ? computeBreakdown(data, osCol) : null,
     activity: lastSeenCol ? computeActivity(data, lastSeenCol) : null,
     locations: computeLocations(plansLite, assetRoomNumbers),
+    roomNumberColumn: imp?.roomNumberColumn ?? null,
     dataset: imp
       ? { filename: imp.filename, importedAt: imp.createdAt, rowCount: imp.rowCount }
       : null,

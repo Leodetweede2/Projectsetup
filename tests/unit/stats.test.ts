@@ -4,8 +4,10 @@ import {
   computeBreakdown,
   computeCore,
   computeDepartment,
+  computeDepartmentCoverage,
   computeLocations,
   computePivot,
+  computeUnmappedRooms,
   detectColumn,
   type AssetData,
   type AssetRecordLite,
@@ -147,6 +149,45 @@ describe("computeActivity", () => {
     expect(a.stale).toBe(1);
     expect(a.unknown).toBe(2);
     expect(a.total).toBe(5);
+  });
+});
+
+describe("computeDepartmentCoverage", () => {
+  const recs: AssetRecordLite[] = [
+    { roomNumber: "H1001", data: row({ Afdeling: "Radiologie" }) }, // placed
+    { roomNumber: "H9999", data: row({ Afdeling: "Radiologie" }) }, // unplaced
+    { roomNumber: "H8888", data: row({ Afdeling: "ICT" }) }, // unplaced
+    { roomNumber: "H7777", data: row({ Afdeling: "ICT" }) }, // unplaced
+    { roomNumber: "H1002", data: row({ Afdeling: "Cardiologie" }) }, // placed
+  ];
+  const placed = new Set(["H1001", "H1002"]);
+
+  it("ranks departments by unplaced PCs first", () => {
+    const cov = computeDepartmentCoverage(recs, "Afdeling", placed);
+    expect(cov.column).toBe("Afdeling");
+    expect(cov.rows[0]).toEqual({ name: "ICT", total: 2, located: 0, unplaced: 2 });
+    expect(cov.rows[1]).toEqual({ name: "Radiologie", total: 2, located: 1, unplaced: 1 });
+    expect(cov.rows[2]).toEqual({ name: "Cardiologie", total: 1, located: 1, unplaced: 0 });
+  });
+
+  it("returns nothing without a department column", () => {
+    expect(computeDepartmentCoverage(recs, null, placed)).toEqual({ column: null, rows: [] });
+  });
+});
+
+describe("computeUnmappedRooms", () => {
+  const recs: AssetRecordLite[] = [
+    { roomNumber: "H1001", data: row({ Ruimte: "H1.001" }) }, // placed
+    { roomNumber: "H9999", data: row({ Ruimte: "H9.999" }) }, // unplaced
+    { roomNumber: "H9999", data: row({ Ruimte: "H9.999" }) }, // unplaced (same room)
+    { roomNumber: "", data: row({ Ruimte: "" }) }, // no room number
+  ];
+  const placed = new Set(["H1001"]);
+
+  it("lists unplaced room numbers with PC counts and a display label", () => {
+    const out = computeUnmappedRooms(recs, placed, "Ruimte");
+    expect(out[0]).toEqual({ key: "H9999", label: "H9.999", count: 2 });
+    expect(out).toContainEqual({ key: "", label: "(no room number)", count: 1 });
   });
 });
 

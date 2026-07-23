@@ -32,6 +32,9 @@ export default async function DashboardPage({
   const locations = dash?.locations ?? null;
   const osStats = dash?.os ?? null;
   const activity = dash?.activity ?? null;
+  const coverage = dash?.departmentCoverage ?? null;
+  const unmappedRooms = dash?.unmappedRooms ?? null;
+  const roomNumberCol = dash?.roomNumberColumn ?? null;
   const dataset = dash?.dataset ?? null;
   const datasetStale = dataset ? daysSince(dataset.importedAt) > 30 : false;
 
@@ -81,8 +84,9 @@ export default async function DashboardPage({
             <StatTile
               label="Inactive PCs (90+ days)"
               value={activity.stale}
-              sub={`Not seen in "${activity.column}"`}
+              sub={activity.stale > 0 ? "View these PCs" : `All seen recently in "${activity.column}"`}
               tone={activity.stale > 0 ? "amber" : "green"}
+              href={activity.stale > 0 ? "/list?activity=stale" : undefined}
               icon={<IconClock />}
             />
           )}
@@ -192,18 +196,24 @@ export default async function DashboardPage({
                 <ul className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
                   {(
                     [
-                      ["Active (≤30 days)", activity.active, "bg-green-500"],
-                      ["30–90 days", activity.recent, "bg-brand-400"],
-                      ["Inactive (90+ days)", activity.stale, "bg-amber-500"],
-                      ["Unknown / no date", activity.unknown, "bg-slate-400"],
+                      ["Active (≤30 days)", activity.active, "bg-green-500", "active"],
+                      ["30–90 days", activity.recent, "bg-brand-400", "recent"],
+                      ["Inactive (90+ days)", activity.stale, "bg-amber-500", "stale"],
+                      ["Unknown / no date", activity.unknown, "bg-slate-400", "unknown"],
                     ] as const
-                  ).map(([label, n, cls]) => (
-                    <li key={label} className="flex items-center justify-between gap-2">
-                      <span className="flex items-center gap-2 text-ink-muted">
-                        <span className={`inline-block h-2.5 w-2.5 rounded-full ${cls}`} />
-                        {label}
-                      </span>
-                      <span className="tabular-nums font-medium text-ink">{n}</span>
+                  ).map(([label, n, cls, bucket]) => (
+                    <li key={label}>
+                      <Link
+                        href={`/list?activity=${bucket}`}
+                        className="-mx-2 flex items-center justify-between gap-2 rounded-md px-2 py-0.5 transition-colors hover:bg-surface-2"
+                        title={`Show ${label} PCs in the asset list`}
+                      >
+                        <span className="flex items-center gap-2 text-ink-muted">
+                          <span className={`inline-block h-2.5 w-2.5 rounded-full ${cls}`} />
+                          {label}
+                        </span>
+                        <span className="tabular-nums font-medium text-ink">{n}</span>
+                      </Link>
                     </li>
                   ))}
                 </ul>
@@ -222,6 +232,107 @@ export default async function DashboardPage({
             <Pivot stats={pivot} />
           </CardBody>
         </Card>
+      )}
+
+      {((coverage && coverage.rows.length > 0) ||
+        (unmappedRooms && unmappedRooms.length > 0)) && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {coverage && coverage.column && coverage.rows.length > 0 && (
+            <Card>
+              <CardHeader className="flex items-center justify-between gap-4">
+                <CardTitle>Coverage by department</CardTitle>
+                <span className="text-xs text-ink-faint">by &quot;{coverage.column}&quot;</span>
+              </CardHeader>
+              <CardBody className="p-0">
+                <Table>
+                  <THead>
+                    <TR>
+                      <TH>Department</TH>
+                      <TH className="text-right">Total</TH>
+                      <TH className="text-right">Placed</TH>
+                      <TH className="text-right">Unplaced</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {coverage.rows.map((d) => {
+                      const real = isRealValue(d.name);
+                      return (
+                        <TR key={d.name}>
+                          <TD className="max-w-56 truncate font-medium text-ink" title={d.name}>
+                            {real ? (
+                              <Link
+                                href={listDrillHref([{ col: coverage.column!, val: d.name }])}
+                                className="text-brand-600 hover:underline"
+                              >
+                                {d.name}
+                              </Link>
+                            ) : (
+                              d.name
+                            )}
+                          </TD>
+                          <TD className="text-right tabular-nums">{d.total}</TD>
+                          <TD className="text-right tabular-nums text-ink-faint">{d.located}</TD>
+                          <TD className="text-right tabular-nums">
+                            {d.unplaced > 0 && real ? (
+                              <Link
+                                href={listDrillHref([{ col: coverage.column!, val: d.name }], {
+                                  located: "no",
+                                })}
+                                className="font-medium text-amber-600 hover:underline dark:text-amber-400"
+                              >
+                                {d.unplaced}
+                              </Link>
+                            ) : (
+                              <span className={d.unplaced > 0 ? "font-medium text-amber-600" : "text-ink-faint"}>
+                                {d.unplaced}
+                              </span>
+                            )}
+                          </TD>
+                        </TR>
+                      );
+                    })}
+                  </TBody>
+                </Table>
+              </CardBody>
+            </Card>
+          )}
+
+          {unmappedRooms && unmappedRooms.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Unmapped room numbers</CardTitle>
+              </CardHeader>
+              <CardBody>
+                <p className="mb-3 text-sm text-ink-faint">
+                  Room numbers in the asset list that aren&apos;t on any floor plan yet — pin these
+                  to locate their PCs.
+                </p>
+                <ul className="divide-y divide-line">
+                  {unmappedRooms.map((r) => (
+                    <li key={r.key} className="flex items-center justify-between gap-3 py-1.5 text-sm">
+                      <span className="truncate font-medium text-ink" title={r.label}>
+                        {r.label}
+                      </span>
+                      <span className="flex shrink-0 items-center gap-3">
+                        <span className="tabular-nums text-ink-muted">
+                          {r.count} PC{r.count === 1 ? "" : "s"}
+                        </span>
+                        {r.key && roomNumberCol && (
+                          <Link
+                            href={listDrillHref([{ col: roomNumberCol, val: r.label }])}
+                            className="text-brand-600 hover:underline"
+                          >
+                            view
+                          </Link>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </CardBody>
+            </Card>
+          )}
+        </div>
       )}
 
       {locations && locations.length > 0 && (

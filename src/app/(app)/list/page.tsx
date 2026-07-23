@@ -2,6 +2,8 @@ import { requirePermission } from "@/lib/auth/guards";
 import { PERMISSIONS } from "@/lib/rbac/permissions";
 import { getAllAssetRows } from "@/lib/assets/queries";
 import { buildInitialFilters } from "@/lib/assets/listParams";
+import { detectColumn, LASTSEEN_RE } from "@/lib/maps/stats";
+import { ACTIVITY_BUCKETS, type ActivityBucket } from "@/lib/assets/activity";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { IconList, IconImport } from "@/components/icons";
@@ -19,14 +21,20 @@ export default async function AssetListPage({
     val?: string;
     col2?: string;
     val2?: string;
+    activity?: string;
   }>;
 }) {
   await requirePermission(PERMISSIONS.MAPS_READ);
-  const { located, q, col, val, col2, val2 } = await searchParams;
+  const { located, q, col, val, col2, val2, activity } = await searchParams;
   const initialUnlocated = located === "no";
   const { import: imp, columns, rows } = await getAllAssetRows();
   const initialFilters = buildInitialFilters({ col, val, col2, val2 }, columns);
   const initialQuery = q?.trim() ?? "";
+  const lastSeenColumn = detectColumn(columns, LASTSEEN_RE);
+  const initialActivity =
+    activity && (ACTIVITY_BUCKETS as string[]).includes(activity)
+      ? (activity as ActivityBucket)
+      : null;
 
   if (!imp) {
     return (
@@ -59,9 +67,11 @@ export default async function AssetListPage({
         columns={columns}
         rows={rows}
         roomNumberColumn={imp.roomNumberColumn}
+        lastSeenColumn={lastSeenColumn}
         initialUnlocated={initialUnlocated}
         initialFilters={initialFilters}
         initialQuery={initialQuery}
+        initialActivity={initialActivity}
       />
     </div>
   );
